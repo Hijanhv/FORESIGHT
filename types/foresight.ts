@@ -1,0 +1,94 @@
+/**
+ * Core domain types for Foresight.
+ * The engine is a deterministic function of the ordered event stream, so these
+ * normalized shapes are the contract shared by ingestion (Phase 1), the replay
+ * harness (Phase 2), the anticipation engine (Phase 3), and the UI (Phase 4).
+ */
+
+/** Soccer stat keys from the TxLINE scores feed (see 04-TXLINE-API-REFERENCE §4). */
+export const StatKey = {
+  GoalHome: 1,
+  GoalAway: 2,
+  YellowHome: 3,
+  YellowAway: 4,
+  RedHome: 5,
+  RedAway: 6,
+  CornerHome: 7,
+  CornerAway: 8,
+} as const;
+export type StatKey = (typeof StatKey)[keyof typeof StatKey];
+
+/** Game phases (statusSoccerId / gameState). */
+export const GamePhase = {
+  NotStarted: 1,
+  FirstHalf: 2,
+  HalfTime: 3,
+  SecondHalf: 4,
+  Ended: 5,
+  Penalties: 12,
+  EndedPens: 13,
+} as const;
+export type GamePhase = (typeof GamePhase)[keyof typeof GamePhase];
+
+export type Side = "home" | "away";
+
+/**
+ * Normalized odds tick. `Pct` from the TxLINE odds stream is the de-margined,
+ * market-implied probability per outcome — the sharp "market brain".
+ */
+export interface OddsTick {
+  kind: "odds";
+  fixtureId: string;
+  ts: number; // epoch ms
+  homeProb: number; // 0..1
+  drawProb: number; // 0..1
+  awayProb: number; // 0..1
+  inRunning: boolean;
+}
+
+/** Normalized pitch event from the scores stream (act on confirmed:true). */
+export interface ScoreEvent {
+  kind: "score";
+  fixtureId: string;
+  seq: number;
+  ts: number; // epoch ms
+  confirmed: boolean;
+  statKey: number; // see StatKey
+  action: string; // e.g. "add" | "remove" | "confirm"
+  phase: number; // see GamePhase
+  clockSeconds: number;
+}
+
+/** The single normalized stream written to logs/events.jsonl and replayed. */
+export type UnifiedEvent = OddsTick | ScoreEvent;
+
+/** Running match state derived from the ordered event stream. */
+export interface MatchState {
+  fixtureId: string;
+  homeScore: number;
+  awayScore: number;
+  phase: number;
+  clockSeconds: number;
+}
+
+/**
+ * One frame of engine output — the clean stream the UI consumes.
+ * winProb is the tracked/leading-team market probability; momentum is signed
+ * toward the side applying pressure; anticipation is 0..1; brewing is the
+ * emotional flag ("🔥 a goal is brewing").
+ */
+export interface ForesightFrame {
+  fixtureId: string;
+  ts: number;
+  clockSeconds: number;
+  phase: number;
+  homeProb: number;
+  drawProb: number;
+  awayProb: number;
+  marketVel: number; // d/dt of the leading prob
+  momentum: number; // -1..1, signed toward the pressuring side
+  pressureSide: Side;
+  anticipation: number; // 0..1
+  brewing: boolean;
+  brewingSide: Side | null;
+}
