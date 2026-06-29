@@ -16,6 +16,7 @@
 import type {
   ForesightFrame,
   OddsTick,
+  PitchEvent,
   ScoreEvent,
   Side,
   UnifiedEvent,
@@ -75,6 +76,8 @@ export interface EngineState {
   phase: number;
   clockSeconds: number;
   ts: number;
+  // most recent notable pitch event (goal / card) — persists until replaced
+  lastEvent: PitchEvent | null;
 }
 
 const ACTIVE_PHASES = new Set<number>([GamePhase.FirstHalf, GamePhase.SecondHalf]);
@@ -98,6 +101,7 @@ export function initState(fixtureId: string): EngineState {
     phase: GamePhase.NotStarted,
     clockSeconds: 0,
     ts: 0,
+    lastEvent: null,
   };
 }
 
@@ -140,16 +144,34 @@ function applyOdds(state: EngineState, ev: OddsTick, p: EngineParams): void {
 function applyScore(state: EngineState, ev: ScoreEvent, p: EngineParams): void {
   state.phase = ev.phase;
   state.clockSeconds = ev.clockSeconds;
-  // Only confirmed, additive events move the world. (Removals/unconfirms are noise.)
+
+  // Score is authoritative from the Stats snapshot — handles mid-match connections
+  // where we never see the original goal event.
+  if (ev.snapshot) {
+    state.homeScore = ev.snapshot.homeScore;
+    state.awayScore = ev.snapshot.awayScore;
+  }
+
+  // Only confirmed, additive events affect pressure. (Removals/unconfirms are noise.)
   if (!ev.confirmed || !isAdd(ev.action)) return;
+
+  const eventKind = ev.statKey !== 0 ? statKeyToEventKind(ev.statKey) : null;
+  if (eventKind && ev.statKey !== 0) {
+    state.lastEvent = {
+      kind: eventKind,
+      side: statKeyToSide(ev.statKey),
+      clockSeconds: ev.clockSeconds,
+      seq: ev.seq,
+    };
+  }
 
   switch (ev.statKey) {
     case StatKey.GoalHome:
-      state.homeScore += 1;
-      state.pressureHome = 0; // the anticipation paid off — reset
+      if (!ev.snapshot) state.homeScore += 1; // fallback if no Stats map
+      state.pressureHome = 0; // anticipation paid off — reset
       break;
     case StatKey.GoalAway:
-      state.awayScore += 1;
+      if (!ev.snapshot) state.awayScore += 1;
       state.pressureAway = 0;
       break;
     case StatKey.CornerHome:
@@ -158,7 +180,7 @@ function applyScore(state: EngineState, ev: ScoreEvent, p: EngineParams): void {
     case StatKey.CornerAway:
       state.pressureAway += p.cornerWeight;
       break;
-    // A card *against* a side eases pressure on the other; treat as minor pressure for the fouled side.
+    // A card against a side eases pressure; treat as minor pressure for the fouled side.
     case StatKey.YellowHome:
     case StatKey.RedHome:
       state.pressureAway += p.cardWeight;
@@ -168,6 +190,18 @@ function applyScore(state: EngineState, ev: ScoreEvent, p: EngineParams): void {
       state.pressureHome += p.cardWeight;
       break;
   }
+}
+
+function statKeyToEventKind(statKey: number): PitchEvent["kind"] | null {
+  if (statKey === StatKey.GoalHome || statKey === StatKey.GoalAway) return "goal";
+  if (statKey === StatKey.YellowHome || statKey === StatKey.YellowAway) return "yellow";
+  if (statKey === StatKey.RedHome || statKey === StatKey.RedAway) return "red";
+  if (statKey === StatKey.CornerHome || statKey === StatKey.CornerAway) return "corner";
+  return null;
+}
+
+function statKeyToSide(statKey: number): Side {
+  return statKey % 2 === 1 ? "home" : "away"; // odd keys = home, even = away
 }
 
 function isAdd(action: string): boolean {
@@ -209,6 +243,7 @@ function frame(state: EngineState, p: EngineParams): ForesightFrame {
     anticipation,
     brewing,
     brewingSide: brewing ? pressureSide : null,
+    lastEvent: state.lastEvent,
   };
 }
 

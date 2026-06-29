@@ -54,8 +54,15 @@ export async function activateToken(jwt: string, input: ActivationInput): Promis
     }),
   });
   if (!res.ok) throw new Error(`token/activate failed: ${res.status}`);
-  const body = (await res.json()) as { token?: string } | string;
-  const token = typeof body === "string" ? body : body.token;
+  const text = await res.text();
+  // Response is either a raw token string or a JSON object with a `token` field.
+  let token: string;
+  try {
+    const body = JSON.parse(text) as { token?: string } | string;
+    token = typeof body === "string" ? body : (body.token ?? "");
+  } catch {
+    token = text.trim();
+  }
   if (!token) throw new Error("token/activate returned no token");
   return token;
 }
@@ -71,7 +78,10 @@ async function* sse<T>(
   signal?: AbortSignal,
 ): AsyncGenerator<T> {
   const res = await fetch(url, { headers: authHeaders(auth), signal });
-  if (!res.ok || !res.body) throw new Error(`stream ${url} failed: ${res.status}`);
+  if (!res.ok || !res.body) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`stream ${url} failed: ${res.status} — ${body.slice(0, 200)}`);
+  }
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buf = "";
@@ -117,8 +127,9 @@ export async function* streamScores(
 ): AsyncGenerator<ScoreEvent> {
   const url = withFixture(`${config.txline.apiUrl}${txlineEndpoints.scoresStream}`, fixtureId);
   for await (const raw of sse<RawScorePayload>(url, auth, signal)) {
-    const ev = normalizeScore(raw);
-    if (ev) yield ev;
+    // TxLINE score stream may include all live fixtures; filter to the requested one.
+    if (fixtureId && String(raw.FixtureId) !== fixtureId) continue;
+    yield normalizeScore(raw);
   }
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { ForesightFrame } from "@/types/foresight";
+import { useEffect, useRef, useState } from "react";
+import type { ForesightFrame, PitchEvent } from "@/types/foresight";
 import { GamePhase } from "@/types/foresight";
 
 const PHASE_LABEL: Record<number, string> = {
@@ -24,28 +24,64 @@ function antColor(ant: number, brewing: boolean) {
   return "#0EA5C4";
 }
 
-export function GaugeWidget({ fixtureId }: { fixtureId?: string } = {}) {
+const EVENT_CONFIG: Record<PitchEvent["kind"], { label: string; bg: string; text: string; icon: string }> = {
+  goal:   { label: "GOAL",        bg: "bg-amber-400/20 border-amber-400/40",  text: "text-amber-500", icon: "⚽" },
+  yellow: { label: "YELLOW CARD", bg: "bg-yellow-300/20 border-yellow-400/40", text: "text-yellow-500", icon: "🟨" },
+  red:    { label: "RED CARD",    bg: "bg-red-500/20 border-red-500/40",       text: "text-red-500",    icon: "🟥" },
+  corner: { label: "CORNER",      bg: "bg-cool/10 border-cool/30",             text: "text-cool",       icon: "⚑" },
+};
+
+export function GaugeWidget({
+  fixtureId,
+  homeTeam = "HOME",
+  awayTeam = "AWAY",
+}: { fixtureId?: string; homeTeam?: string; awayTeam?: string } = {}) {
   const [frame, setFrame] = useState<ForesightFrame | null>(null);
   const [mode, setMode] = useState<"synthetic" | "live">("synthetic");
+  const [liveConnected, setLiveConnected] = useState(false);
+  const [flash, setFlash] = useState<PitchEvent | null>(null);
+  const lastSeenSeq = useRef<number | undefined>(undefined);
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let es: EventSource;
+    let syntheticFallback = false;
 
     const connectLive = () => {
       const url = fixtureId
         ? `/api/live?fixtureId=${encodeURIComponent(fixtureId)}`
         : "/api/live";
       es = new EventSource(url);
+
+      // Switch badge to live as soon as streams are established.
+      es.addEventListener("connected", () => {
+        setMode("live");
+        setLiveConnected(true);
+        syntheticFallback = false;
+      });
+
       es.onmessage = (e) => {
         try {
-          setFrame(JSON.parse(e.data) as ForesightFrame);
+          const data = JSON.parse(e.data) as ForesightFrame;
+          if ("error" in data) return;
+          setFrame(data);
           setMode("live");
+          if (data.lastEvent && data.lastEvent.seq !== lastSeenSeq.current) {
+            lastSeenSeq.current = data.lastEvent.seq;
+            setFlash(data.lastEvent);
+            if (flashTimer.current) clearTimeout(flashTimer.current);
+            flashTimer.current = setTimeout(() => setFlash(null), 3500);
+          }
         } catch {}
       };
-      // 503 = env not configured → fall back to synthetic demo
+
+      // Only fall back to synthetic if we never connected (503 / network error).
       es.onerror = () => {
-        es.close();
-        connectSynthetic();
+        if (!syntheticFallback && !liveConnected) {
+          es.close();
+          syntheticFallback = true;
+          connectSynthetic();
+        }
       };
     };
 
@@ -59,8 +95,12 @@ export function GaugeWidget({ fixtureId }: { fixtureId?: string } = {}) {
       };
     };
 
+    setLiveConnected(false);
     connectLive();
-    return () => es?.close();
+    return () => {
+      es?.close();
+      if (flashTimer.current) clearTimeout(flashTimer.current);
+    };
   }, [fixtureId]);
 
   const ant = frame?.anticipation ?? 0;
@@ -138,6 +178,21 @@ export function GaugeWidget({ fixtureId }: { fixtureId?: string } = {}) {
         </div>
       </div>
 
+      {/* Event flash */}
+      <div className="h-7 flex items-center justify-center">
+        {flash && (() => {
+          const cfg = EVENT_CONFIG[flash.kind];
+          return (
+            <span
+              className={`flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-wider animate-pulse ${cfg.bg} ${cfg.text}`}
+              style={{ animationDuration: "0.6s" }}
+            >
+              {cfg.icon} {cfg.label} · {flash.side === "home" ? homeTeam : awayTeam} · {clock(flash.clockSeconds)}
+            </span>
+          );
+        })()}
+      </div>
+
       {/* Score & clock */}
       <div className="text-center">
         <div className="font-display text-3xl font-medium tabular-nums text-ink">
@@ -146,16 +201,18 @@ export function GaugeWidget({ fixtureId }: { fixtureId?: string } = {}) {
         <div className="mt-1 font-mono text-[11px] text-muted">
           {frame
             ? `${clock(frame.clockSeconds)} · ${PHASE_LABEL[frame.phase] ?? "—"}`
-            : "connecting…"}
+            : liveConnected
+              ? "pre-match · waiting for kickoff"
+              : "connecting…"}
         </div>
       </div>
 
       {/* Momentum bar */}
       <div className="w-full space-y-1.5">
         <div className="flex justify-between font-mono text-[9px] uppercase tracking-wider text-muted">
-          <span>away</span>
+          <span>{awayTeam}</span>
           <span>momentum</span>
-          <span>home</span>
+          <span>{homeTeam}</span>
         </div>
         <div className="relative h-1 overflow-hidden rounded-full bg-line">
           {/* Filled segment — extends from centre toward the pressuring side */}
@@ -181,13 +238,13 @@ export function GaugeWidget({ fixtureId }: { fixtureId?: string } = {}) {
         <div className="w-full space-y-2">
           {(
             [
-              { label: "HOME", prob: frame.homeProb, color: "#0EA5C4" },
-              { label: "DRAW", prob: frame.drawProb, color: "#6b7686" },
-              { label: "AWAY", prob: frame.awayProb, color: "#F2542D" },
-            ] as const
+              { label: homeTeam, prob: frame.homeProb, color: "#0EA5C4" },
+              { label: "DRAW",   prob: frame.drawProb, color: "#6b7686" },
+              { label: awayTeam, prob: frame.awayProb, color: "#F2542D" },
+            ]
           ).map(({ label, prob, color }) => (
             <div key={label} className="flex items-center gap-2">
-              <span className="w-10 font-mono text-[10px] text-muted">
+              <span className="w-14 font-mono text-[10px] text-muted truncate">
                 {label}
               </span>
               <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-line">

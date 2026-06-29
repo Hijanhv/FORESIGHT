@@ -57,6 +57,8 @@ export interface ScoreEvent {
   action: string; // e.g. "add" | "remove" | "confirm"
   phase: number; // see GamePhase
   clockSeconds: number;
+  /** Cumulative match totals from the TxLINE Stats map — authoritative source for score. */
+  snapshot?: { homeScore: number; awayScore: number };
 }
 
 /** The single normalized stream written to logs/events.jsonl and replayed. */
@@ -69,6 +71,14 @@ export interface MatchState {
   awayScore: number;
   phase: number;
   clockSeconds: number;
+}
+
+/** A notable pitch event to surface in the UI (goal, card). */
+export interface PitchEvent {
+  kind: "goal" | "yellow" | "red" | "corner";
+  side: Side;
+  clockSeconds: number;
+  seq: number; // unique — UI uses this to detect new events
 }
 
 /**
@@ -93,4 +103,5 @@ export interface ForesightFrame {
   anticipation: number; // 0..1
   brewing: boolean;
   brewingSide: Side | null;
+  lastEvent: PitchEvent | null;
 }

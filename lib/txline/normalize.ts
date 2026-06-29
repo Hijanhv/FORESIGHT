@@ -8,12 +8,17 @@ import type { OddsTick, ScoreEvent, Side } from "@/types/foresight";
 import { GamePhase, StatKey } from "@/types/foresight";
 import type { RawOddsPayload, RawScorePayload } from "./types";
 
-/** participant id → side. TODO: confirm 1=home / 2=away against the API reference. */
-function sideOf(participant: number): Side | null {
-  if (participant === 1) return "home";
+/**
+ * participant id → side.
+ * TxLINE sends 1=home/2=away for the first two participants it registers for the fixture.
+ * If values other than 1/2 show up in the logs, update this mapping.
+ */
+function sideOf(participant: number | undefined): Side | null {
+  if (participant === 1) return "home"; // Participant1 = home (confirmed from Participant1IsHome)
   if (participant === 2) return "away";
   return null;
 }
+
 
 /** (action category, side) → our side-encoded StatKey. Unknown actions are skipped. */
 function statKeyFor(action: string, side: Side): number | null {
@@ -27,7 +32,8 @@ function statKeyFor(action: string, side: Side): number | null {
 }
 
 /** SoccerFixtureStatus → GamePhase. Numeric statuses are assumed to be statusSoccerId. */
-function phaseOf(statusId: number | string): number {
+function phaseOf(statusId: number | string | undefined | null): number {
+  if (statusId == null) return GamePhase.NotStarted;
   if (typeof statusId === "number") return statusId;
   const s = statusId.toLowerCase();
   if (s.includes("firsthalf") || s === "1h") return GamePhase.FirstHalf;
@@ -51,7 +57,8 @@ function probs(p: RawOddsPayload): { home: number; draw: number; away: number } 
   const draw = pct(/^(x|draw|d)$/, 1);
   const away = pct(/^(2|away|a)$/, 2);
   if (![home, draw, away].every((v) => Number.isFinite(v))) return null;
-  return { home, draw, away };
+  // TxLINE Pct values are percentages (e.g. 83.96); engine/UI expect 0–1 fractions.
+  return { home: home / 100, draw: draw / 100, away: away / 100 };
 }
 
 /** Is this payload the full-time 1X2 market we track? (Other markets are ignored.) */
@@ -77,20 +84,24 @@ export function normalizeOdds(p: RawOddsPayload): OddsTick | null {
   };
 }
 
-export function normalizeScore(p: RawScorePayload): ScoreEvent | null {
-  const side = sideOf(p.participant);
-  if (!side) return null;
-  const statKey = statKeyFor(p.action, side);
-  if (statKey == null) return null;
+export function normalizeScore(p: RawScorePayload): ScoreEvent {
+  const side = sideOf(p.Participant);
+  const statKey = side != null ? statKeyFor(p.Action, side) : null;
+  // Stats keys 1–8 align with StatKey enum: 1=GoalHome, 2=GoalAway.
+  // Using them as the authoritative score handles mid-match connections.
+  const snapshot = p.Stats
+    ? { homeScore: Number(p.Stats[String(StatKey.GoalHome)] ?? 0), awayScore: Number(p.Stats[String(StatKey.GoalAway)] ?? 0) }
+    : undefined;
   return {
     kind: "score",
-    fixtureId: String(p.fixtureId),
-    seq: p.seq,
-    ts: p.ts,
-    confirmed: !!p.confirmed,
-    statKey,
-    action: "add",
-    phase: phaseOf(p.statusId),
-    clockSeconds: p.clock?.seconds ?? 0,
+    fixtureId: String(p.FixtureId),
+    seq: p.Seq,
+    ts: p.Ts,
+    confirmed: !!p.Confirmed,
+    statKey: statKey ?? 0,
+    action: p.Action,
+    phase: phaseOf(p.StatusId),
+    clockSeconds: p.Clock?.Seconds ?? 0,
+    snapshot,
   };
 }

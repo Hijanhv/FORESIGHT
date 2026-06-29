@@ -31,20 +31,24 @@ export interface RawOddsPayload {
   Pct: string[];
 }
 
-/** One score update (GET /api/scores/stream → data). */
+/** One score update (GET /api/scores/stream → data). API uses PascalCase. */
 export interface RawScorePayload {
-  fixtureId: number;
-  seq: number;
-  confirmed: boolean;
-  /** SoccerFixtureStatus — number aligned with GamePhase (statusSoccerId) when numeric. */
-  statusId: number | string;
-  ts: number; // epoch ms
-  action: string; // "Goal" | "Corner" | "YellowCard" | ...
-  clock: { running: boolean; seconds: number };
-  /** Map<ScoreStatKey, count>. Exact key enum TBD; we key off action+participant instead. */
-  stats?: Record<string, number>;
-  participant: number; // 1 = home, 2 = away  (TODO: confirm against API ref)
-  dataSoccer?: unknown;
+  FixtureId: number;
+  Seq: number;
+  Confirmed?: boolean;
+  /** SoccerFixtureStatus numeric id (2 = FirstHalf, etc). */
+  StatusId?: number | string;
+  Ts: number; // epoch ms
+  Action: string; // "goal" | "corner" | "yellow_card" | "throw_in" | ...
+  Clock?: { Running: boolean; Seconds: number };
+  /** Cumulative match stats keyed by StatKey integer (1=GoalHome, 2=GoalAway, …). */
+  Stats?: Record<string, number>;
+  Participant?: number; // 1 = home, 2 = away
+  Participant1IsHome?: boolean;
+  Participant1Id?: number;
+  Participant2Id?: number;
+  GameState?: string;
+  Data?: Record<string, unknown>;
 }
 
 /** Node of a Merkle proof path (GET /api/scores/stat-validation). */
