@@ -43,13 +43,14 @@ export async function guestStart(): Promise<string> {
 
 /** Step 2 — activate the long-lived API token with a wallet signature. */
 export async function activateToken(jwt: string, input: ActivationInput): Promise<string> {
-  const res = await fetch(`${config.txline.apiUrl}${txlineEndpoints.tokenActivate}`, {
+  // Activation lives on the auth host (/api/token/activate), not the data host.
+  const res = await fetch(`${config.txline.authUrl}/api/token/activate`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${jwt}` },
     body: JSON.stringify({
       txSig: input.txSig,
       walletSignature: input.walletSignature,
-      leagues: input.leagues ?? [config.txline.serviceLevelId],
+      leagues: input.leagues ?? [],
     }),
   });
   if (!res.ok) throw new Error(`token/activate failed: ${res.status}`);

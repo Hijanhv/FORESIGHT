@@ -1,0 +1,14 @@
+{
+  "regions": ["iad1"],
+  "functions": {
+    "app/api/live/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/gauge/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/record/route.ts": {
+      "maxDuration": 300
+    }
+  }
+}

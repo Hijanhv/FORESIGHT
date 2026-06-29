@@ -198,6 +198,8 @@ function frame(state: EngineState, p: EngineParams): ForesightFrame {
     ts: state.ts,
     clockSeconds: state.clockSeconds,
     phase: state.phase,
+    homeScore: state.homeScore,
+    awayScore: state.awayScore,
     homeProb: orZero(state.homeProb),
     drawProb: orZero(state.drawProb),
     awayProb: orZero(state.awayProb),

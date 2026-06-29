@@ -4,10 +4,10 @@
  */
 export const config = {
   txline: {
+    /** Auth host — guest/start and token/activate live here. */
     authUrl: process.env.TXLINE_AUTH_URL ?? "https://txline.txodds.com",
-    apiUrl: process.env.TXLINE_API_URL ?? "https://txline-dev.txodds.com/api",
-    /** Free World Cup real-time tier (odds + scores). */
-    serviceLevelId: 12,
+    /** Data API host — odds and scores streams. */
+    apiUrl: process.env.TXLINE_API_URL ?? "https://oracle.txodds.com/api",
   },
   solana: {
     cluster: process.env.SOLANA_CLUSTER ?? "devnet",
@@ -16,10 +16,9 @@ export const config = {
   },
 } as const;
 
-/** TxLINE endpoints Foresight uses (also listed in the submission tech doc). */
+/** TxLINE path constants for the data API (all relative to apiUrl). */
 export const txlineEndpoints = {
   guestStart: "/auth/guest/start", // on the auth host
-  tokenActivate: "/token/activate",
   oddsStream: "/odds/stream",
   oddsSnapshot: (fixtureId: string) => `/odds/snapshot/${fixtureId}`,
   scoresStream: "/scores/stream",

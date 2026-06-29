@@ -1,4 +1,5 @@
-import { FsLockup, FsMark } from "@/components/brand/logo";
+import { FsLockup } from "@/components/brand/logo";
+import { MatchView } from "@/components/gauge/MatchView";
 
 export default function Home() {
   return (
@@ -7,7 +8,7 @@ export default function Home() {
       <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-6">
         <FsLockup size={34} />
         <span className="rounded-full border border-line px-3 py-1 font-mono text-[11px] tracking-wide text-muted">
-          devnet · build v0
+          Phase 4 · devnet
         </span>
       </header>
 
@@ -36,18 +37,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* gauge placeholder — the real one lands in Phase 4 */}
-        <div className="flex w-full max-w-md flex-col items-center gap-4 rounded-3xl border border-line bg-surface p-10 shadow-[0_1px_2px_rgba(10,14,20,0.04),0_14px_34px_rgba(10,14,20,0.05)]">
-          <FsMark size={120} />
-          <div className="text-center">
-            <div className="font-display text-sm font-medium text-ink">
-              The live gauge lands in Phase 4
-            </div>
-            <div className="mt-1 font-mono text-[11px] text-muted">
-              foundation online · engine + UX next
-            </div>
-          </div>
-        </div>
+        <MatchView />
       </main>
 
       {/* footer */}

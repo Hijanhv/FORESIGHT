@@ -82,6 +82,8 @@ export interface ForesightFrame {
   ts: number;
   clockSeconds: number;
   phase: number;
+  homeScore: number;
+  awayScore: number;
   homeProb: number;
   drawProb: number;
   awayProb: number;
