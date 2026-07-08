@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ForesightFrame, PitchEvent } from "@/types/foresight";
 import { GamePhase } from "@/types/foresight";
+import { MatchStats } from "./MatchStats";
 
 const PHASE_LABEL: Record<number, string> = {
   [GamePhase.NotStarted]: "Pre-match",
@@ -44,26 +45,41 @@ export function GaugeWidget({
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    let es: EventSource;
-    let syntheticFallback = false;
+    let liveEs: EventSource | null = null;
+    let synthEs: EventSource | null = null;
+    let gotLiveFrame = false;
+    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const connectLive = () => {
+    // Show the scripted demo whenever live data isn't flowing — no match in
+    // play, or env not configured — so the gauge is never blank.
+    const openSynthetic = () => {
+      if (synthEs || gotLiveFrame) return;
+      synthEs = new EventSource("/api/gauge");
+      synthEs.onmessage = (e) => {
+        if (gotLiveFrame) return;
+        try {
+          setFrame(JSON.parse(e.data) as ForesightFrame);
+          setMode("synthetic");
+        } catch {}
+      };
+    };
+
+    const openLive = () => {
       const url = fixtureId
         ? `/api/live?fixtureId=${encodeURIComponent(fixtureId)}`
         : "/api/live";
-      es = new EventSource(url);
+      liveEs = new EventSource(url);
 
-      // Switch badge to live as soon as streams are established.
-      es.addEventListener("connected", () => {
-        setMode("live");
-        setLiveConnected(true);
-        syntheticFallback = false;
-      });
+      liveEs.addEventListener("connected", () => setLiveConnected(true));
 
-      es.onmessage = (e) => {
+      liveEs.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data) as ForesightFrame;
           if ("error" in data) return;
+          // Real live data arrived — prefer it and drop the demo.
+          gotLiveFrame = true;
+          synthEs?.close();
+          synthEs = null;
           setFrame(data);
           setMode("live");
           if (data.lastEvent && data.lastEvent.seq !== lastSeenSeq.current) {
@@ -75,30 +91,22 @@ export function GaugeWidget({
         } catch {}
       };
 
-      // Only fall back to synthetic if we never connected (503 / network error).
-      es.onerror = () => {
-        if (!syntheticFallback && !liveConnected) {
-          es.close();
-          syntheticFallback = true;
-          connectSynthetic();
-        }
-      };
-    };
-
-    const connectSynthetic = () => {
-      es = new EventSource("/api/gauge");
-      es.onmessage = (e) => {
-        try {
-          setFrame(JSON.parse(e.data) as ForesightFrame);
-          setMode("synthetic");
-        } catch {}
-      };
+      // Network error / 503 (env not set) → show the demo immediately.
+      liveEs.onerror = () => openSynthetic();
     };
 
     setLiveConnected(false);
-    connectLive();
+    gotLiveFrame = false;
+    openLive();
+    // If no live frame within 6s (e.g. no match in play), show the demo.
+    fallbackTimer = setTimeout(() => {
+      if (!gotLiveFrame) openSynthetic();
+    }, 6000);
+
     return () => {
-      es?.close();
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      liveEs?.close();
+      synthEs?.close();
       if (flashTimer.current) clearTimeout(flashTimer.current);
     };
   }, [fixtureId]);
@@ -109,6 +117,7 @@ export function GaugeWidget({
   const isLive = mode === "live";
 
   return (
+    <>
     <div className="flex w-full max-w-md flex-col items-center gap-6 rounded-3xl border border-line bg-surface p-8 shadow-[0_1px_2px_rgba(10,14,20,0.04),0_14px_34px_rgba(10,14,20,0.05)]">
       {/* Arc gauge */}
       <div className="relative">
@@ -278,5 +287,11 @@ export function GaugeWidget({
         </span>
       </div>
     </div>
+
+    {/* Live match-stats panel — real per-side numbers from the scores feed */}
+    {frame && (
+      <MatchStats stats={frame.stats} homeTeam={homeTeam} awayTeam={awayTeam} />
+    )}
+    </>
   );
 }

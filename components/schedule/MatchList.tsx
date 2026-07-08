@@ -73,12 +73,11 @@ export function MatchList({ onSelect }: { onSelect: (fixtureId: string) => void 
   const today = new Date().toISOString().slice(0, 10);
 
   const live = FIXTURES.filter(isLive);
-  const upcoming = FIXTURES.filter(
-    (f) => !isLive(f) && !isFinished(f) && f.date >= today,
-  );
-  const past = FIXTURES.filter((f) => isFinished(f) && f.date >= today);
+  const upcoming = FIXTURES.filter((f) => !isLive(f) && !isFinished(f));
+  // Always show recent results so the schedule is never empty between rounds.
+  const recentFinished = FIXTURES.filter(isFinished).slice(-12);
 
-  const displayFixtures = [...live, ...upcoming, ...past];
+  const displayFixtures = [...live, ...upcoming, ...recentFinished];
   const grouped = groupByDate(displayFixtures);
 
   if (grouped.length === 0) return null;

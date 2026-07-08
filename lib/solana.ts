@@ -32,6 +32,7 @@ import {
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   TOKEN_2022_PROGRAM_ID,
+  createAssociatedTokenAccountIdempotentInstruction,
   getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
 import { config } from "@/lib/config";
@@ -48,17 +49,32 @@ export interface WalletProof {
 // Anchor discriminator for `subscribe` (sha256("global:subscribe")[0..8])
 const SUBSCRIBE_DISCRIMINATOR = Buffer.from([254, 28, 191, 138, 156, 179, 183, 53]);
 
-// Per-cluster program and token-mint addresses
-const CLUSTER_CONFIG = {
+interface ClusterAccounts {
+  programId: PublicKey;
+  /** TxL subscription mint (Token-2022). */
+  tokenMint: PublicKey;
+  /** Fixed global program accounts. Verified from a real on-chain subscribe tx;
+   *  supplied explicitly because the PDA seeds aren't documented. Omit to derive. */
+  pricingMatrix?: PublicKey;
+  tokenTreasuryPda?: PublicKey;
+  tokenTreasuryVault?: PublicKey;
+}
+
+// Per-cluster program and account addresses.
+// Mainnet accounts verified from subscribe tx 5sju8Jwz…SaCz (user 9FT2…).
+const CLUSTER_CONFIG: Record<"devnet" | "mainnet-beta", ClusterAccounts> = {
   devnet: {
     programId: new PublicKey("6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J"),
     tokenMint: new PublicKey("GYdhNurtx2EgiTPRHVGuFWKHPycdpUqgedVkwEVUWVTC"),
   },
   "mainnet-beta": {
     programId: new PublicKey("9ExbZjAapQww1vfcisDmrngPinHTEfpjYRWMunJgcKaA"),
-    tokenMint: new PublicKey("sLX1i9dfmsuyFBmJTWuGjjRmG4VPWYK6dRRKSM4BCSx"),
+    tokenMint: new PublicKey("Zhw9TVKp68a1QrftncMSd6ELXKDtpVMNuMGr1jNwdeL"),
+    pricingMatrix: new PublicKey("HPjtXsXRYAdBppSMzsqGGDTuhUQT7aXtsbn52CjhqRM7"),
+    tokenTreasuryPda: new PublicKey("Gjt57tE6wcUC1qd3FQRG4X9wULcc6y2vA22m4CvPEvpZ"),
+    tokenTreasuryVault: new PublicKey("DnbxehrjqjVr3YwekMiCG8Uf4KVsrgwqRmHbdxLJ3Haa"),
   },
-} as const;
+};
 
 function clusterConfig() {
   const cluster = config.solana.cluster === "mainnet-beta" ? "mainnet-beta" : "devnet";
@@ -109,15 +125,17 @@ export function buildActivationMessage(
  * On devnet, automatically requests an airdrop if the balance is low.
  * On mainnet, throws if the wallet is underfunded (user must fund manually).
  */
-export async function ensureFunded(keypair: Keypair, minSol = 0.05): Promise<void> {
+export async function ensureFunded(keypair: Keypair, minSol = 0.005): Promise<void> {
+  // The subscribe tx costs ~0.003 SOL (Token-2022 ATA rent + fee); 0.005 leaves headroom.
   const connection = new Connection(config.solana.rpc, "confirmed");
   const balance = await connection.getBalance(keypair.publicKey);
   if (balance >= minSol * LAMPORTS_PER_SOL) return;
 
   if (config.solana.cluster !== "devnet") {
     throw new Error(
-      `Wallet ${keypair.publicKey.toBase58()} needs at least ${minSol} SOL on mainnet. ` +
-        "Fund it and retry.",
+      `Wallet ${keypair.publicKey.toBase58()} has ${(balance / LAMPORTS_PER_SOL).toFixed(
+        4,
+      )} SOL — needs at least ${minSol} SOL on mainnet. Fund this exact address and retry.`,
     );
   }
 
@@ -141,27 +159,23 @@ export async function subscribeOnChain(
   opts: { serviceLevelId?: number; durationWeeks?: number } = {},
 ): Promise<string> {
   const { serviceLevelId = 12, durationWeeks = 4 } = opts;
-  const { programId, tokenMint } = clusterConfig();
+  const cfg = clusterConfig();
+  const { programId, tokenMint } = cfg;
   const connection = new Connection(config.solana.rpc, "confirmed");
 
-  // PDA: pricing_matrix
-  const [pricingMatrixPda] = PublicKey.findProgramAddressSync(
-    [Buffer.from("pricing_matrix")],
-    programId,
-  );
-  // PDA: token_treasury_pda (owns the vault)
-  const [tokenTreasuryPda] = PublicKey.findProgramAddressSync(
-    [Buffer.from("token_treasury_v2")],
-    programId,
-  );
-  // ATA: treasury vault that collects subscription fees
-  const tokenTreasuryVault = getAssociatedTokenAddressSync(
-    tokenMint,
-    tokenTreasuryPda,
-    true, // allowOwnerOffCurve=true for PDAs
-    TOKEN_2022_PROGRAM_ID,
-  );
-  // ATA: user's TxL token account (may not exist; free tier charges 0 tokens)
+  // Global program accounts: prefer the verified constants; fall back to seed
+  // derivation on clusters where we don't have them pinned.
+  const pricingMatrixPda =
+    cfg.pricingMatrix ??
+    PublicKey.findProgramAddressSync([Buffer.from("pricing_matrix")], programId)[0];
+  const tokenTreasuryPda =
+    cfg.tokenTreasuryPda ??
+    PublicKey.findProgramAddressSync([Buffer.from("token_treasury_v2")], programId)[0];
+  const tokenTreasuryVault =
+    cfg.tokenTreasuryVault ??
+    getAssociatedTokenAddressSync(tokenMint, tokenTreasuryPda, true, TOKEN_2022_PROGRAM_ID);
+
+  // ATA: user's TxL token account (Token-2022). Created idempotently below.
   const userTokenAccount = getAssociatedTokenAddressSync(
     tokenMint,
     keypair.publicKey,
@@ -190,7 +204,19 @@ export async function subscribeOnChain(
     data,
   });
 
-  const tx = new Transaction().add(instruction);
+  // The program requires the user's TxL token account to ALREADY exist (it does
+  // not create it). Prepend an idempotent create-ATA instruction so first-time
+  // wallets don't fail with AccountNotInitialized (0xbc4 / error 3012).
+  const createAta = createAssociatedTokenAccountIdempotentInstruction(
+    keypair.publicKey, // payer
+    userTokenAccount, // ata to create
+    keypair.publicKey, // owner
+    tokenMint,
+    TOKEN_2022_PROGRAM_ID,
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+  );
+
+  const tx = new Transaction().add(createAta, instruction);
   return sendAndConfirmTransaction(connection, tx, [keypair]);
 }
 

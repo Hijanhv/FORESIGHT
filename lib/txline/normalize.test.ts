@@ -66,7 +66,17 @@ describe("normalizeScore", () => {
     expect(ev.action).toBe("Goal");
     expect(ev.phase).toBe(GamePhase.FirstHalf);
     expect(ev.clockSeconds).toBe(2160);
-    expect(ev.snapshot).toEqual({ homeScore: 1, awayScore: 0 });
+    // Snapshot now carries the full 8-key stat map (goals + corners + cards).
+    expect(ev.snapshot).toEqual({
+      homeScore: 1,
+      awayScore: 0,
+      homeCorners: 2, // Stats key "7"
+      awayCorners: 1, // Stats key "8"
+      homeYellows: 0,
+      awayYellows: 0,
+      homeReds: 0,
+      awayReds: 0,
+    });
   });
 
   it("maps an away corner to CornerAway", () => {

@@ -73,6 +73,13 @@ export function generateSyntheticMatch(opts: SyntheticOptions = {}): UnifiedEven
     pushOdds(t);
   }
 
+  // A quieter away side + a booking each way — gives the Match Stats panel
+  // realistic home-vs-away numbers (these early/decayed events don't disturb
+  // the 33–36min brewing window the engine tests assert on).
+  for (const t of [12 * 60, 24 * 60]) pushScore(t, StatKey.CornerAway);
+  pushScore(20 * 60, StatKey.YellowHome);
+  pushScore(41 * 60, StatKey.YellowAway);
+
   // Home corner barrage — pressure with no repricing.
   for (const t of HOME_CORNERS_AT_SEC) pushScore(t, StatKey.CornerHome);
 

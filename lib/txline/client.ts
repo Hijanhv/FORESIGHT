@@ -68,7 +68,12 @@ export async function activateToken(jwt: string, input: ActivationInput): Promis
 }
 
 function authHeaders(auth: TxlineAuth): HeadersInit {
-  return { Authorization: `Bearer ${auth.jwt}`, "X-Api-Token": auth.apiToken };
+  return {
+    Authorization: `Bearer ${auth.jwt}`,
+    "X-Api-Token": auth.apiToken,
+    Accept: "text/event-stream",
+    "Cache-Control": "no-cache",
+  };
 }
 
 /** Minimal SSE reader over fetch's body stream. Yields parsed `data` payloads, skips heartbeats. */

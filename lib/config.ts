@@ -6,8 +6,8 @@ export const config = {
   txline: {
     /** Auth host — guest/start and token/activate live here. */
     authUrl: process.env.TXLINE_AUTH_URL ?? "https://txline.txodds.com",
-    /** Data API host — odds and scores streams. */
-    apiUrl: process.env.TXLINE_API_URL ?? "https://oracle.txodds.com/api",
+    /** Data API host — odds and scores streams live on the same host as auth. */
+    apiUrl: process.env.TXLINE_API_URL ?? "https://txline.txodds.com/api",
   },
   solana: {
     cluster: process.env.SOLANA_CLUSTER ?? "devnet",

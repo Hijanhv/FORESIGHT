@@ -73,6 +73,13 @@ export interface EngineState {
   // running match state
   homeScore: number;
   awayScore: number;
+  // cumulative real match stats (corners / cards, per side)
+  homeCorners: number;
+  awayCorners: number;
+  homeYellows: number;
+  awayYellows: number;
+  homeReds: number;
+  awayReds: number;
   phase: number;
   clockSeconds: number;
   ts: number;
@@ -98,6 +105,12 @@ export function initState(fixtureId: string): EngineState {
     lastPressureTs: null,
     homeScore: 0,
     awayScore: 0,
+    homeCorners: 0,
+    awayCorners: 0,
+    homeYellows: 0,
+    awayYellows: 0,
+    homeReds: 0,
+    awayReds: 0,
     phase: GamePhase.NotStarted,
     clockSeconds: 0,
     ts: 0,
@@ -145,14 +158,22 @@ function applyScore(state: EngineState, ev: ScoreEvent, p: EngineParams): void {
   state.phase = ev.phase;
   state.clockSeconds = ev.clockSeconds;
 
-  // Score is authoritative from the Stats snapshot — handles mid-match connections
-  // where we never see the original goal event.
+  // The Stats snapshot is authoritative for score AND cumulative stats — this
+  // handles mid-match connections where we never see the original events.
+  // Synthetic events carry no snapshot, so those counters are incremented below.
   if (ev.snapshot) {
-    state.homeScore = ev.snapshot.homeScore;
-    state.awayScore = ev.snapshot.awayScore;
+    const s = ev.snapshot;
+    state.homeScore = s.homeScore;
+    state.awayScore = s.awayScore;
+    if (s.homeCorners != null) state.homeCorners = s.homeCorners;
+    if (s.awayCorners != null) state.awayCorners = s.awayCorners;
+    if (s.homeYellows != null) state.homeYellows = s.homeYellows;
+    if (s.awayYellows != null) state.awayYellows = s.awayYellows;
+    if (s.homeReds != null) state.homeReds = s.homeReds;
+    if (s.awayReds != null) state.awayReds = s.awayReds;
   }
 
-  // Only confirmed, additive events affect pressure. (Removals/unconfirms are noise.)
+  // Only confirmed, additive events affect pressure/counters. (Removals/unconfirms are noise.)
   if (!ev.confirmed || !isAdd(ev.action)) return;
 
   const eventKind = ev.statKey !== 0 ? statKeyToEventKind(ev.statKey) : null;
@@ -176,18 +197,28 @@ function applyScore(state: EngineState, ev: ScoreEvent, p: EngineParams): void {
       break;
     case StatKey.CornerHome:
       state.pressureHome += p.cornerWeight;
+      if (!ev.snapshot) state.homeCorners += 1;
       break;
     case StatKey.CornerAway:
       state.pressureAway += p.cornerWeight;
+      if (!ev.snapshot) state.awayCorners += 1;
       break;
     // A card against a side eases pressure; treat as minor pressure for the fouled side.
     case StatKey.YellowHome:
+      state.pressureAway += p.cardWeight;
+      if (!ev.snapshot) state.homeYellows += 1;
+      break;
     case StatKey.RedHome:
       state.pressureAway += p.cardWeight;
+      if (!ev.snapshot) state.homeReds += 1;
       break;
     case StatKey.YellowAway:
+      state.pressureHome += p.cardWeight;
+      if (!ev.snapshot) state.awayYellows += 1;
+      break;
     case StatKey.RedAway:
       state.pressureHome += p.cardWeight;
+      if (!ev.snapshot) state.awayReds += 1;
       break;
   }
 }
@@ -244,6 +275,14 @@ function frame(state: EngineState, p: EngineParams): ForesightFrame {
     brewing,
     brewingSide: brewing ? pressureSide : null,
     lastEvent: state.lastEvent,
+    stats: {
+      homeCorners: state.homeCorners,
+      awayCorners: state.awayCorners,
+      homeYellows: state.homeYellows,
+      awayYellows: state.awayYellows,
+      homeReds: state.homeReds,
+      awayReds: state.awayReds,
+    },
   };
 }
 

@@ -8,7 +8,7 @@ export default function Home() {
       <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-6">
         <FsLockup size={34} />
         <span className="rounded-full border border-line px-3 py-1 font-mono text-[11px] tracking-wide text-muted">
-          Phase 4 · devnet
+          Solana mainnet · live
         </span>
       </header>
 
@@ -43,7 +43,7 @@ export default function Home() {
       {/* footer */}
       <footer className="mx-auto w-full max-w-5xl px-6 py-8">
         <p className="font-mono text-[11px] text-muted">
-          Foresight · powered by TxLINE live odds + events · Solana devnet
+          Foresight · powered by TxLINE live odds + events · Solana mainnet
         </p>
       </footer>
     </div>

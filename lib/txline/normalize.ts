@@ -31,6 +31,11 @@ function statKeyFor(action: string, side: Side): number | null {
   return null;
 }
 
+/** Read one integer stat total out of the TxLINE Stats map (0 when absent). */
+function stat(stats: Record<string, number>, key: number): number {
+  return Number(stats[String(key)] ?? 0);
+}
+
 /** SoccerFixtureStatus → GamePhase. Numeric statuses are assumed to be statusSoccerId. */
 function phaseOf(statusId: number | string | undefined | null): number {
   if (statusId == null) return GamePhase.NotStarted;
@@ -87,10 +92,20 @@ export function normalizeOdds(p: RawOddsPayload): OddsTick | null {
 export function normalizeScore(p: RawScorePayload): ScoreEvent {
   const side = sideOf(p.Participant);
   const statKey = side != null ? statKeyFor(p.Action, side) : null;
-  // Stats keys 1–8 align with StatKey enum: 1=GoalHome, 2=GoalAway.
-  // Using them as the authoritative score handles mid-match connections.
+  // Stats keys 1–8 are the full soccer stat map (goals, cards, corners per side).
+  // Treat them as authoritative — this also handles mid-match connections where
+  // we never saw the original events.
   const snapshot = p.Stats
-    ? { homeScore: Number(p.Stats[String(StatKey.GoalHome)] ?? 0), awayScore: Number(p.Stats[String(StatKey.GoalAway)] ?? 0) }
+    ? {
+        homeScore: stat(p.Stats, StatKey.GoalHome),
+        awayScore: stat(p.Stats, StatKey.GoalAway),
+        homeYellows: stat(p.Stats, StatKey.YellowHome),
+        awayYellows: stat(p.Stats, StatKey.YellowAway),
+        homeReds: stat(p.Stats, StatKey.RedHome),
+        awayReds: stat(p.Stats, StatKey.RedAway),
+        homeCorners: stat(p.Stats, StatKey.CornerHome),
+        awayCorners: stat(p.Stats, StatKey.CornerAway),
+      }
     : undefined;
   return {
     kind: "score",

@@ -28,6 +28,16 @@ describe("anticipation engine", () => {
     expect(last.brewing).toBe(false);
   });
 
+  it("accumulates real per-side match stats (corners/cards) from the stream", () => {
+    const last = frames.at(-1)!;
+    expect(last.stats.homeCorners).toBe(5);
+    expect(last.stats.awayCorners).toBe(2);
+    expect(last.stats.homeYellows).toBe(1);
+    expect(last.stats.awayYellows).toBe(1);
+    expect(last.stats.homeReds).toBe(0);
+    expect(last.stats.awayReds).toBe(0);
+  });
+
   it("keeps probabilities and momentum in range", () => {
     for (const f of frames) {
       expect(f.anticipation).toBeGreaterThanOrEqual(0);

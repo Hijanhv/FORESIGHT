@@ -46,6 +46,20 @@ export interface OddsTick {
   inRunning: boolean;
 }
 
+/**
+ * Cumulative per-side match statistics. These are the ONLY team stats TxLINE's
+ * soccer feed carries (StatKey 1–8) — there is no shots/possession/xG in the
+ * feed, so everything the UI shows here is real, verifiable data.
+ */
+export interface MatchStats {
+  homeCorners: number;
+  awayCorners: number;
+  homeYellows: number;
+  awayYellows: number;
+  homeReds: number;
+  awayReds: number;
+}
+
 /** Normalized pitch event from the scores stream (act on confirmed:true). */
 export interface ScoreEvent {
   kind: "score";
@@ -57,8 +71,12 @@ export interface ScoreEvent {
   action: string; // e.g. "add" | "remove" | "confirm"
   phase: number; // see GamePhase
   clockSeconds: number;
-  /** Cumulative match totals from the TxLINE Stats map — authoritative source for score. */
-  snapshot?: { homeScore: number; awayScore: number };
+  /**
+   * Cumulative match totals from the TxLINE Stats map — authoritative source for
+   * score and stats. Present on live events (the feed sends the full Stats map);
+   * absent on synthetic events, where the engine increments counters instead.
+   */
+  snapshot?: { homeScore: number; awayScore: number } & Partial<MatchStats>;
 }
 
 /** The single normalized stream written to logs/events.jsonl and replayed. */
@@ -104,4 +122,6 @@ export interface ForesightFrame {
   brewing: boolean;
   brewingSide: Side | null;
   lastEvent: PitchEvent | null;
+  /** Cumulative real match stats (corners/cards) — goals live in home/awayScore. */
+  stats: MatchStats;
 }
