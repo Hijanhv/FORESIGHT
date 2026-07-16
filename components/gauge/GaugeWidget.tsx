@@ -42,6 +42,9 @@ export function GaugeWidget({
   const [liveConnected, setLiveConnected] = useState(false);
   const [liveMeta, setLiveMeta] = useState<{ home?: string; away?: string; competition?: string } | null>(null);
   const [flash, setFlash] = useState<PitchEvent | null>(null);
+  const [calling, setCalling] = useState(false);
+  const [receipt, setReceipt] = useState<{ txSig: string; explorerUrl: string } | null>(null);
+  const [callError, setCallError] = useState<string | null>(null);
   const lastSeenSeq = useRef<number | undefined>(undefined);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -134,6 +137,36 @@ export function GaugeWidget({
   // The World Cup feed is a 2-way (draw-no-bet) market — no draw price.
   const twoWay = frame ? frame.drawProb < 0.005 : false;
 
+  const handleCallIt = async () => {
+    if (!frame || calling) return;
+    setCalling(true);
+    setCallError(null);
+    try {
+      const marketProb = Math.max(frame.homeProb, frame.awayProb);
+      const res = await fetch("/api/called-it", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fixtureId: frame.fixtureId,
+          home: homeLabel,
+          away: awayLabel,
+          clockSeconds: frame.clockSeconds,
+          anticipation: frame.anticipation,
+          marketProb,
+          homeScore: frame.homeScore,
+          awayScore: frame.awayScore,
+        }),
+      });
+      const data = (await res.json()) as { txSig?: string; explorerUrl?: string; error?: string };
+      if (!res.ok || !data.txSig) throw new Error(data.error ?? "Failed to record on-chain");
+      setReceipt({ txSig: data.txSig, explorerUrl: data.explorerUrl ?? "" });
+    } catch (err) {
+      setCallError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setCalling(false);
+    }
+  };
+
   return (
     <>
     <div className="flex w-full max-w-md flex-col items-center gap-6 rounded-3xl border border-line bg-surface p-8 shadow-[0_1px_2px_rgba(10,14,20,0.04),0_14px_34px_rgba(10,14,20,0.05)]">
@@ -219,6 +252,66 @@ export function GaugeWidget({
           );
         })()}
       </div>
+
+      {/* "Called It" — the on-chain fan loop. Appears when a goal is brewing;
+          taps write a tamper-evident Solana memo you can share. */}
+      {frame && !receipt && (
+        <button
+          onClick={handleCallIt}
+          disabled={calling}
+          className={`w-full rounded-2xl border px-4 py-3 font-mono text-[11px] uppercase tracking-wider transition-all disabled:opacity-60 ${
+            brewing
+              ? "border-hot/40 bg-hot/10 text-hot hover:bg-hot/15 animate-pulse"
+              : "border-line text-muted hover:border-hot/30 hover:text-hot"
+          }`}
+          style={brewing ? { animationDuration: "1.2s" } : undefined}
+        >
+          {calling
+            ? "recording on Solana…"
+            : brewing
+              ? "🔥 Call it — I feel a goal coming"
+              : "Call it — record your read on-chain"}
+        </button>
+      )}
+
+      {/* Shareable receipt — proof you called it before the market moved. */}
+      {receipt && (
+        <div className="w-full rounded-2xl border border-hot/30 bg-hot/5 px-4 py-3 text-center">
+          <div className="font-mono text-[11px] uppercase tracking-wider text-hot">
+            ✓ Called it — recorded on Solana
+          </div>
+          <div className="mt-1 font-mono text-[10px] text-muted break-all">
+            {receipt.txSig.slice(0, 8)}…{receipt.txSig.slice(-8)}
+          </div>
+          <div className="mt-2 flex items-center justify-center gap-3">
+            <a
+              href={receipt.explorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-[10px] text-cool underline decoration-dotted hover:text-hot"
+            >
+              view on Solscan ↗
+            </a>
+            <button
+              onClick={() => {
+                navigator.clipboard?.writeText(receipt.explorerUrl).catch(() => {});
+              }}
+              className="font-mono text-[10px] text-muted underline decoration-dotted hover:text-ink"
+            >
+              copy link
+            </button>
+            <button
+              onClick={() => setReceipt(null)}
+              className="font-mono text-[10px] text-muted underline decoration-dotted hover:text-ink"
+            >
+              call again
+            </button>
+          </div>
+        </div>
+      )}
+      {callError && (
+        <div className="w-full text-center font-mono text-[10px] text-hot">{callError}</div>
+      )}
 
       {/* Score & clock */}
       <div className="text-center">
@@ -318,7 +411,14 @@ export function GaugeWidget({
 
     {/* Live match-stats panel — real per-side numbers from the scores feed */}
     {frame && (
-      <MatchStats stats={frame.stats} homeTeam={homeLabel} awayTeam={awayLabel} />
+      <MatchStats
+        stats={frame.stats}
+        homeTeam={homeLabel}
+        awayTeam={awayLabel}
+        fixtureId={frame.fixtureId}
+        lastEvent={frame.lastEvent}
+        live={isLive}
+      />
     )}
     </>
   );

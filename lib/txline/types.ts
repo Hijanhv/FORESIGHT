@@ -51,9 +51,10 @@ export interface RawScorePayload {
   Data?: Record<string, unknown>;
 }
 
-/** Node of a Merkle proof path (GET /api/scores/stat-validation). */
+/** Node of a Merkle proof path (GET /api/scores/stat-validation). Hashes are
+ *  32-byte arrays as delivered by the API. */
 export interface ProofNode {
-  hash: string;
+  hash: number[];
   isRightSibling: boolean;
 }
 
@@ -61,12 +62,18 @@ export interface ProofNode {
  * stat-validation response — the input to TxODDS's on-chain `validateStat` view.
  * We surface this as the "✓ Verified on Solana" proof; we do not re-implement the
  * verifier (it runs as a read-only call against their `dailyScoresMerkleRoots`).
+ * Shape verified against a real World Cup fixture.
  */
 export interface StatValidationResponse {
-  statToProve: number;
-  eventStatRoot: string;
+  ts: number;
+  statToProve: { key: number; value: number; period: number };
+  eventStatRoot: number[];
+  summary: {
+    fixtureId: number;
+    updateStats: { updateCount: number; minTimestamp: number; maxTimestamp: number };
+    eventStatsSubTreeRoot: number[];
+  };
   statProof: ProofNode[];
-  summary: { fixtureId: number; updateStats: number; eventStatsSubTreeRoot: string };
   subTreeProof: ProofNode[];
   mainTreeProof: ProofNode[];
 }

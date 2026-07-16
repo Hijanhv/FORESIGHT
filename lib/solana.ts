@@ -46,6 +46,38 @@ export interface WalletProof {
   leagues: number[];
 }
 
+/** SPL Memo program — records an arbitrary UTF-8 note on-chain. */
+const MEMO_PROGRAM_ID = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+
+export interface CalledItReceipt {
+  /** Confirmed on-chain memo transaction signature. */
+  txSig: string;
+  /** The prover wallet that signed the receipt. */
+  wallet: string;
+  /** The exact note written on-chain. */
+  memo: string;
+  cluster: string;
+}
+
+/**
+ * Post a "Called It" memo on Solana — a tamper-evident, timestamped receipt that
+ * a fan felt a goal coming *before the market repriced*. Pure @solana/web3.js; no
+ * program of our own. Returns the confirmed tx signature.
+ */
+export async function postCalledIt(memo: string, keypairPath?: string): Promise<CalledItReceipt> {
+  const note = memo.slice(0, 480); // keep well under the memo size limit
+  const keypair = loadKeypair(keypairPath);
+  const connection = new Connection(config.solana.rpc, "confirmed");
+  const instruction = new TransactionInstruction({
+    programId: MEMO_PROGRAM_ID,
+    keys: [{ pubkey: keypair.publicKey, isSigner: true, isWritable: true }],
+    data: Buffer.from(note, "utf-8"),
+  });
+  const tx = new Transaction().add(instruction);
+  const txSig = await sendAndConfirmTransaction(connection, tx, [keypair]);
+  return { txSig, wallet: keypair.publicKey.toBase58(), memo: note, cluster: config.solana.cluster };
+}
+
 // Anchor discriminator for `subscribe` (sha256("global:subscribe")[0..8])
 const SUBSCRIBE_DISCRIMINATOR = Buffer.from([254, 28, 191, 138, 156, 179, 183, 53]);
 
