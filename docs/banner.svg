@@ -1,0 +1,45 @@
+<svg width="1280" height="420" viewBox="0 0 1280 420" fill="none" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="ch" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0EA5C4"/>
+      <stop offset="0.5" stop-color="#F59E0B"/>
+      <stop offset="1" stop-color="#F2542D"/>
+    </linearGradient>
+    <radialGradient id="glowCool" cx="0.1" cy="0.1" r="0.55">
+      <stop offset="0" stop-color="#0EA5C4" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#0EA5C4" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowHot" cx="0.92" cy="0.12" r="0.6">
+      <stop offset="0" stop-color="#F2542D" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#F2542D" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1280" height="420" rx="24" fill="#0A0E14"/>
+  <rect width="1280" height="420" rx="24" fill="url(#glowCool)"/>
+  <rect width="1280" height="420" rx="24" fill="url(#glowHot)"/>
+
+  <!-- arc gauge motif (270deg, radius 150, centre 190,210) -->
+  <g transform="translate(190 210)">
+    <path d="M -106 106 A 150 150 0 1 1 106 106" fill="none" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="22" stroke-linecap="round"/>
+    <path d="M -106 106 A 150 150 0 1 1 106 106" fill="none" stroke="url(#ch)" stroke-width="22" stroke-linecap="round" stroke-dasharray="580 720"/>
+    <text x="0" y="8" text-anchor="middle" fill="#F2542D" font-size="76" font-weight="700" textLength="118" lengthAdjust="spacingAndGlyphs">82</text>
+    <text x="0" y="52" text-anchor="middle" fill="#F2542D" font-size="17" font-weight="700" textLength="150" lengthAdjust="spacingAndGlyphs">🔥 BREWING</text>
+  </g>
+
+  <!-- wordmark + copy (all widths pinned with textLength so they never overflow) -->
+  <g transform="translate(430 0)">
+    <text x="0" y="140" fill="#F6F8FB" font-size="80" font-weight="700" textLength="430" lengthAdjust="spacingAndGlyphs">Foresight</text>
+    <rect x="3" y="164" width="120" height="6" rx="3" fill="url(#ch)"/>
+    <text x="0" y="224" fill="#F6F8FB" font-size="33" font-weight="600" textLength="700" lengthAdjust="spacingAndGlyphs">Feel a goal coming <tspan fill="#F2542D">before it happens.</tspan></text>
+    <text x="2" y="276" fill="#8A93A2" font-size="21" textLength="700" lengthAdjust="spacingAndGlyphs">Live odds + events, turned into an anticipation engine — it lights</text>
+    <text x="2" y="304" fill="#8A93A2" font-size="21" textLength="640" lengthAdjust="spacingAndGlyphs">up when the pitch heats up before the betting market does.</text>
+
+    <g transform="translate(2 336)">
+      <rect x="0" y="0" width="236" height="38" rx="19" fill="#0EA5C4" fill-opacity="0.12" stroke="#0EA5C4" stroke-opacity="0.5"/>
+      <text x="22" y="25" fill="#3CC7E0" font-size="18" font-weight="700" textLength="192" lengthAdjust="spacingAndGlyphs">Live data · TxLINE</text>
+      <rect x="256" y="0" width="360" height="38" rx="19" fill="#F2542D" fill-opacity="0.12" stroke="#F2542D" stroke-opacity="0.5"/>
+      <text x="278" y="25" fill="#F87A5B" font-size="18" font-weight="700" textLength="316" lengthAdjust="spacingAndGlyphs">Called It · Verified on Solana</text>
+    </g>
+  </g>
+</svg>
