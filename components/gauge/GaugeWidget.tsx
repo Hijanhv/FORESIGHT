@@ -40,6 +40,7 @@ export function GaugeWidget({
   const [frame, setFrame] = useState<ForesightFrame | null>(null);
   const [mode, setMode] = useState<"synthetic" | "live">("synthetic");
   const [liveConnected, setLiveConnected] = useState(false);
+  const [liveMeta, setLiveMeta] = useState<{ home?: string; away?: string; competition?: string } | null>(null);
   const [flash, setFlash] = useState<PitchEvent | null>(null);
   const lastSeenSeq = useRef<number | undefined>(undefined);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -70,7 +71,15 @@ export function GaugeWidget({
         : "/api/live";
       liveEs = new EventSource(url);
 
-      liveEs.addEventListener("connected", () => setLiveConnected(true));
+      liveEs.addEventListener("connected", (e) => {
+        setLiveConnected(true);
+        try {
+          const meta = JSON.parse((e as MessageEvent).data) as {
+            home?: string; away?: string; competition?: string;
+          };
+          if (meta && (meta.home || meta.away)) setLiveMeta(meta);
+        } catch {}
+      });
 
       liveEs.onmessage = (e) => {
         try {
@@ -95,7 +104,6 @@ export function GaugeWidget({
       liveEs.onerror = () => openSynthetic();
     };
 
-    setLiveConnected(false);
     gotLiveFrame = false;
     openLive();
     // If no live frame within 6s (e.g. no match in play), show the demo.
@@ -103,7 +111,11 @@ export function GaugeWidget({
       if (!gotLiveFrame) openSynthetic();
     }, 6000);
 
+    // Reset connection state on teardown (also runs before reconnecting to a new
+    // fixture) — avoids a synchronous setState in the effect body.
     return () => {
+      setLiveConnected(false);
+      setLiveMeta(null);
       if (fallbackTimer) clearTimeout(fallbackTimer);
       liveEs?.close();
       synthEs?.close();
@@ -115,6 +127,12 @@ export function GaugeWidget({
   const brewing = frame?.brewing ?? false;
   const momentum = frame?.momentum ?? 0;
   const isLive = mode === "live";
+  // Prefer team names from the live feed (works for any fixture, not just the
+  // ones hard-coded in the schedule); fall back to props.
+  const homeLabel = liveMeta?.home ?? homeTeam;
+  const awayLabel = liveMeta?.away ?? awayTeam;
+  // The World Cup feed is a 2-way (draw-no-bet) market — no draw price.
+  const twoWay = frame ? frame.drawProb < 0.005 : false;
 
   return (
     <>
@@ -196,7 +214,7 @@ export function GaugeWidget({
               className={`flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-wider animate-pulse ${cfg.bg} ${cfg.text}`}
               style={{ animationDuration: "0.6s" }}
             >
-              {cfg.icon} {cfg.label} · {flash.side === "home" ? homeTeam : awayTeam} · {clock(flash.clockSeconds)}
+              {cfg.icon} {cfg.label} · {flash.side === "home" ? homeLabel : awayLabel} · {clock(flash.clockSeconds)}
             </span>
           );
         })()}
@@ -219,9 +237,9 @@ export function GaugeWidget({
       {/* Momentum bar */}
       <div className="w-full space-y-1.5">
         <div className="flex justify-between font-mono text-[9px] uppercase tracking-wider text-muted">
-          <span>{awayTeam}</span>
+          <span>{awayLabel}</span>
           <span>momentum</span>
-          <span>{homeTeam}</span>
+          <span>{homeLabel}</span>
         </div>
         <div className="relative h-1 overflow-hidden rounded-full bg-line">
           {/* Filled segment — extends from centre toward the pressuring side */}
@@ -242,15 +260,25 @@ export function GaugeWidget({
         </div>
       </div>
 
-      {/* Probability bars */}
+      {/* Market win-probability bars. The World Cup feed is draw-no-bet (2-way),
+          so we show home/away win probability; a 1X2 feed also renders the draw. */}
       {frame && (
         <div className="w-full space-y-2">
+          <div className="flex justify-between font-mono text-[9px] uppercase tracking-wider text-muted">
+            <span>market win prob</span>
+            <span>{twoWay ? "draw-no-bet" : "1X2"}</span>
+          </div>
           {(
-            [
-              { label: homeTeam, prob: frame.homeProb, color: "#0EA5C4" },
-              { label: "DRAW",   prob: frame.drawProb, color: "#6b7686" },
-              { label: awayTeam, prob: frame.awayProb, color: "#F2542D" },
-            ]
+            twoWay
+              ? [
+                  { label: homeLabel, prob: frame.homeProb, color: "#0EA5C4" },
+                  { label: awayLabel, prob: frame.awayProb, color: "#F2542D" },
+                ]
+              : [
+                  { label: homeLabel, prob: frame.homeProb, color: "#0EA5C4" },
+                  { label: "DRAW",    prob: frame.drawProb, color: "#6b7686" },
+                  { label: awayLabel, prob: frame.awayProb, color: "#F2542D" },
+                ]
           ).map(({ label, prob, color }) => (
             <div key={label} className="flex items-center gap-2">
               <span className="w-14 font-mono text-[10px] text-muted truncate">
@@ -290,7 +318,7 @@ export function GaugeWidget({
 
     {/* Live match-stats panel — real per-side numbers from the scores feed */}
     {frame && (
-      <MatchStats stats={frame.stats} homeTeam={homeTeam} awayTeam={awayTeam} />
+      <MatchStats stats={frame.stats} homeTeam={homeLabel} awayTeam={awayLabel} />
     )}
     </>
   );

@@ -82,12 +82,23 @@ export interface EngineState {
   awayReds: number;
   phase: number;
   clockSeconds: number;
+  clockRunning: boolean;
+  /** True once we've seen a Stats snapshot — used to seed totals on a mid-match
+   *  join without spiking pressure for events that happened before we connected. */
+  sawSnapshot: boolean;
   ts: number;
   // most recent notable pitch event (goal / card) — persists until replaced
   lastEvent: PitchEvent | null;
 }
 
-const ACTIVE_PHASES = new Set<number>([GamePhase.FirstHalf, GamePhase.SecondHalf]);
+// In-play phases where `brewing` may trip. Includes extra-time halves (7/9) —
+// verified from real knockout streams — so anticipation survives into ET.
+const ACTIVE_PHASES = new Set<number>([
+  GamePhase.FirstHalf,
+  GamePhase.SecondHalf,
+  GamePhase.ExtraTimeFirstHalf,
+  GamePhase.ExtraTimeSecondHalf,
+]);
 
 export function initState(fixtureId: string): EngineState {
   return {
@@ -113,6 +124,8 @@ export function initState(fixtureId: string): EngineState {
     awayReds: 0,
     phase: GamePhase.NotStarted,
     clockSeconds: 0,
+    clockRunning: false,
+    sawSnapshot: false,
     ts: 0,
     lastEvent: null,
   };
@@ -157,27 +170,19 @@ function applyOdds(state: EngineState, ev: OddsTick, p: EngineParams): void {
 function applyScore(state: EngineState, ev: ScoreEvent, p: EngineParams): void {
   state.phase = ev.phase;
   state.clockSeconds = ev.clockSeconds;
+  if (ev.clockRunning != null) state.clockRunning = ev.clockRunning;
 
-  // The Stats snapshot is authoritative for score AND cumulative stats — this
-  // handles mid-match connections where we never see the original events.
-  // Synthetic events carry no snapshot, so those counters are incremented below.
   if (ev.snapshot) {
-    const s = ev.snapshot;
-    state.homeScore = s.homeScore;
-    state.awayScore = s.awayScore;
-    if (s.homeCorners != null) state.homeCorners = s.homeCorners;
-    if (s.awayCorners != null) state.awayCorners = s.awayCorners;
-    if (s.homeYellows != null) state.homeYellows = s.homeYellows;
-    if (s.awayYellows != null) state.awayYellows = s.awayYellows;
-    if (s.homeReds != null) state.homeReds = s.homeReds;
-    if (s.awayReds != null) state.awayReds = s.awayReds;
+    applySnapshot(state, ev, ev.snapshot, p);
+    return;
   }
 
-  // Only confirmed, additive events affect pressure/counters. (Removals/unconfirms are noise.)
+  // SYNTHETIC PATH — no Stats map, so count from confirmed additive events.
+  // (Removals / unconfirmed "possible" events are noise and ignored.)
   if (!ev.confirmed || !isAdd(ev.action)) return;
 
   const eventKind = ev.statKey !== 0 ? statKeyToEventKind(ev.statKey) : null;
-  if (eventKind && ev.statKey !== 0) {
+  if (eventKind) {
     state.lastEvent = {
       kind: eventKind,
       side: statKeyToSide(ev.statKey),
@@ -188,39 +193,118 @@ function applyScore(state: EngineState, ev: ScoreEvent, p: EngineParams): void {
 
   switch (ev.statKey) {
     case StatKey.GoalHome:
-      if (!ev.snapshot) state.homeScore += 1; // fallback if no Stats map
+      state.homeScore += 1;
       state.pressureHome = 0; // anticipation paid off — reset
       break;
     case StatKey.GoalAway:
-      if (!ev.snapshot) state.awayScore += 1;
+      state.awayScore += 1;
       state.pressureAway = 0;
       break;
     case StatKey.CornerHome:
       state.pressureHome += p.cornerWeight;
-      if (!ev.snapshot) state.homeCorners += 1;
+      state.homeCorners += 1;
       break;
     case StatKey.CornerAway:
       state.pressureAway += p.cornerWeight;
-      if (!ev.snapshot) state.awayCorners += 1;
+      state.awayCorners += 1;
       break;
     // A card against a side eases pressure; treat as minor pressure for the fouled side.
     case StatKey.YellowHome:
       state.pressureAway += p.cardWeight;
-      if (!ev.snapshot) state.homeYellows += 1;
+      state.homeYellows += 1;
       break;
     case StatKey.RedHome:
       state.pressureAway += p.cardWeight;
-      if (!ev.snapshot) state.homeReds += 1;
+      state.homeReds += 1;
       break;
     case StatKey.YellowAway:
       state.pressureHome += p.cardWeight;
-      if (!ev.snapshot) state.awayYellows += 1;
+      state.awayYellows += 1;
       break;
     case StatKey.RedAway:
       state.pressureHome += p.cardWeight;
-      if (!ev.snapshot) state.awayReds += 1;
+      state.awayReds += 1;
       break;
   }
+}
+
+/**
+ * LIVE PATH — the Stats map is authoritative. We detect what changed via deltas
+ * against current state, which is immune to the live feed's quirks: duplicate
+ * "confirmed" events, interleaved unconfirmed "possible" events, and empty Stats
+ * maps (already dropped in normalize). The first snapshot only *seeds* totals so
+ * a mid-match join doesn't spike pressure for events that predate the connection.
+ */
+function applySnapshot(
+  state: EngineState,
+  ev: ScoreEvent,
+  s: NonNullable<ScoreEvent["snapshot"]>,
+  p: EngineParams,
+): void {
+  const cur = (v: number | undefined, fallback: number) => (v == null ? fallback : v);
+  const nextCorners = { home: cur(s.homeCorners, state.homeCorners), away: cur(s.awayCorners, state.awayCorners) };
+  const nextYellows = { home: cur(s.homeYellows, state.homeYellows), away: cur(s.awayYellows, state.awayYellows) };
+  const nextReds = { home: cur(s.homeReds, state.homeReds), away: cur(s.awayReds, state.awayReds) };
+
+  const d = {
+    goalHome: s.homeScore - state.homeScore,
+    goalAway: s.awayScore - state.awayScore,
+    cornerHome: nextCorners.home - state.homeCorners,
+    cornerAway: nextCorners.away - state.awayCorners,
+    yellowHome: nextYellows.home - state.homeYellows,
+    yellowAway: nextYellows.away - state.awayYellows,
+    redHome: nextReds.home - state.homeReds,
+    redAway: nextReds.away - state.awayReds,
+  };
+
+  // Adopt the authoritative totals.
+  state.homeScore = s.homeScore;
+  state.awayScore = s.awayScore;
+  state.homeCorners = nextCorners.home;
+  state.awayCorners = nextCorners.away;
+  state.homeYellows = nextYellows.home;
+  state.awayYellows = nextYellows.away;
+  state.homeReds = nextReds.home;
+  state.awayReds = nextReds.away;
+
+  // First snapshot just syncs state — don't replay history as new events.
+  if (!state.sawSnapshot) {
+    state.sawSnapshot = true;
+    return;
+  }
+
+  // Pressure from positive deltas (multiple corners in one update are additive).
+  if (d.cornerHome > 0) state.pressureHome += p.cornerWeight * d.cornerHome;
+  if (d.cornerAway > 0) state.pressureAway += p.cornerWeight * d.cornerAway;
+  // A card against a side eases its pressure → minor pressure to the opponent.
+  if (d.yellowHome > 0) state.pressureAway += p.cardWeight * d.yellowHome;
+  if (d.yellowAway > 0) state.pressureHome += p.cardWeight * d.yellowAway;
+  if (d.redHome > 0) state.pressureAway += p.cardWeight * d.redHome;
+  if (d.redAway > 0) state.pressureHome += p.cardWeight * d.redAway;
+  // A goal means the anticipation paid off — reset the scorer's pressure.
+  if (d.goalHome > 0) state.pressureHome = 0;
+  if (d.goalAway > 0) state.pressureAway = 0;
+
+  // Flash the single most notable change this update (goal > red > yellow > corner).
+  const flash = pickFlash(d);
+  if (flash) {
+    state.lastEvent = { kind: flash.kind, side: flash.side, clockSeconds: ev.clockSeconds, seq: ev.seq };
+  }
+}
+
+type Delta = Record<string, number>;
+
+/** Choose the most significant new event from a set of positive stat deltas. */
+function pickFlash(d: Delta): { kind: PitchEvent["kind"]; side: Side } | null {
+  if (d.goalHome > 0) return { kind: "goal", side: "home" };
+  if (d.goalAway > 0) return { kind: "goal", side: "away" };
+  if (d.redHome > 0) return { kind: "red", side: "home" };
+  if (d.redAway > 0) return { kind: "red", side: "away" };
+  if (d.yellowHome > 0) return { kind: "yellow", side: "home" };
+  if (d.yellowAway > 0) return { kind: "yellow", side: "away" };
+  if (d.cornerHome > 0) return { kind: "corner", side: "home" };
+  if (d.cornerAway > 0) return { kind: "corner", side: "away" };
+  return null;
 }
 
 function statKeyToEventKind(statKey: number): PitchEvent["kind"] | null {
@@ -252,11 +336,12 @@ function frame(state: EngineState, p: EngineParams): ForesightFrame {
   const marketMove = Number.isFinite(sideBaseline) ? Math.max(0, sideProb - sideBaseline) : 0;
   const marketResponse = clamp01(marketMove / p.marketMoveFull);
 
+  // In play whenever the named phase says so OR the match clock is running
+  // (covers status ids the enum doesn't name, without brewing at half-time/pre).
+  const inPlay = ACTIVE_PHASES.has(state.phase) || state.clockRunning;
   const anticipation = clamp01(pressureNorm * (1 - marketResponse));
   const brewing =
-    ACTIVE_PHASES.has(state.phase) &&
-    pressureNorm >= p.brewMinPressure &&
-    anticipation >= p.brewThreshold;
+    inPlay && pressureNorm >= p.brewMinPressure && anticipation >= p.brewThreshold;
 
   return {
     fixtureId: state.fixtureId,

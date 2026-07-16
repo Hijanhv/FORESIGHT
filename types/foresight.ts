@@ -18,13 +18,22 @@ export const StatKey = {
 } as const;
 export type StatKey = (typeof StatKey)[keyof typeof StatKey];
 
-/** Game phases (statusSoccerId / gameState). */
+/**
+ * Game phases (statusSoccerId). Numeric ids verified against a real World Cup
+ * knockout stream (Argentina v Cape Verde, went to ET + pens):
+ *   1 pre · 2 1H · 3 HT · 4 2H · 6 ET-interval · 7 ET-1H · 8 ET-HT · 9 ET-2H ·
+ *   10 pre-pens · 100 finished. Extra-time halves (7/9) are live play — the engine
+ *   must treat them as active or `brewing` dies during ET (common in knockouts).
+ */
 export const GamePhase = {
   NotStarted: 1,
   FirstHalf: 2,
   HalfTime: 3,
   SecondHalf: 4,
   Ended: 5,
+  ExtraTimeFirstHalf: 7,
+  ExtraTimeHalfTime: 8,
+  ExtraTimeSecondHalf: 9,
   Penalties: 12,
   EndedPens: 13,
 } as const;
@@ -71,6 +80,9 @@ export interface ScoreEvent {
   action: string; // e.g. "add" | "remove" | "confirm"
   phase: number; // see GamePhase
   clockSeconds: number;
+  /** Whether the match clock is running (live feed only). A robust in-play
+   *  signal that works even for status ids the enum doesn't name. */
+  clockRunning?: boolean;
   /**
    * Cumulative match totals from the TxLINE Stats map — authoritative source for
    * score and stats. Present on live events (the feed sends the full Stats map);

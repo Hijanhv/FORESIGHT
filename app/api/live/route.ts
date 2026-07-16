@@ -10,18 +10,29 @@
  */
 
 import type { NextRequest } from "next/server";
-import { guestStart, activateToken, streamOdds, streamScores } from "@/lib/txline/client";
+import {
+  guestStart,
+  activateToken,
+  streamOdds,
+  streamScores,
+  fetchFixtureMeta,
+} from "@/lib/txline/client";
 import { buildWalletProof } from "@/lib/solana";
 import { initState, step } from "@/lib/engine";
 import type { UnifiedEvent } from "@/types/foresight";
 
 export const dynamic = "force-dynamic";
 
+// Live mode works with EITHER a pre-activated API token (Vercel: no wallet file
+// or on-chain tx needed per cold start) OR a wallet that can subscribe on-chain.
+function hasWallet(): boolean {
+  return !!(process.env.WALLET_KEYPAIR_PATH || process.env.WALLET_KEYPAIR_B64);
+}
 function isConfigured(): boolean {
   return !!(
     process.env.TXLINE_AUTH_URL &&
     process.env.TXLINE_API_URL &&
-    process.env.WALLET_KEYPAIR_PATH
+    (process.env.TXLINE_API_TOKEN || hasWallet())
   );
 }
 
@@ -31,6 +42,8 @@ let cachedApiToken: string | null = null;
 let tokenExpiresAt = 0;
 
 async function getApiToken(jwt: string): Promise<string> {
+  // Preferred path: a pre-activated token supplied via env (production).
+  if (process.env.TXLINE_API_TOKEN) return process.env.TXLINE_API_TOKEN;
   if (cachedApiToken && Date.now() < tokenExpiresAt) {
     console.log("[/api/live] reusing cached API token");
     return cachedApiToken;
@@ -96,6 +109,10 @@ export async function GET(request: NextRequest) {
         const apiToken = await getApiToken(jwt);
         const auth = { jwt, apiToken };
 
+        // Look up home/away + team names so odds sides and labels are correct.
+        const meta = fixtureId ? await fetchFixtureMeta(auth, fixtureId) : null;
+        const p1IsHome = meta?.participant1IsHome ?? true;
+
         // 2. Merge odds and scores into one ordered channel via an async queue.
         const queue: UnifiedEvent[] = [];
         let wakeResolve: (() => void) | null = null;
@@ -134,14 +151,20 @@ export async function GET(request: NextRequest) {
         };
 
         // Ingest odds stream in the background.
-        withRetry("odds", () => streamOdds(auth, fixtureId, abort.signal));
+        withRetry("odds", () => streamOdds(auth, fixtureId, abort.signal, p1IsHome));
 
         // Ingest scores stream in the background.
-        withRetry("scores", () => streamScores(auth, fixtureId, abort.signal));
+        withRetry("scores", () => streamScores(auth, fixtureId, abort.signal, p1IsHome));
 
         // Signal the browser we're connected and in live mode — the badge
-        // switches to "live · TxLINE" even during pre-match wait.
-        sendEvent("connected", { fixtureId: fixtureId ?? null });
+        // switches to "live · TxLINE" even during pre-match wait. Send team
+        // names + competition from the feed so the UI can label any fixture.
+        sendEvent("connected", {
+          fixtureId: fixtureId ?? null,
+          home: meta?.home ?? null,
+          away: meta?.away ?? null,
+          competition: meta?.competition ?? null,
+        });
 
         // 3. Drain the queue, keep the SSE alive with periodic comments.
         const state = initState(fixtureId ?? "live");

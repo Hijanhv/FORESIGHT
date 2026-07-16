@@ -18,7 +18,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { NextRequest } from "next/server";
-import { guestStart, activateToken, streamOdds, streamScores } from "@/lib/txline/client";
+import {
+  guestStart,
+  activateToken,
+  streamOdds,
+  streamScores,
+  fetchFixtureMeta,
+} from "@/lib/txline/client";
 import { buildWalletProof } from "@/lib/solana";
 import { initState, step } from "@/lib/engine";
 import type { UnifiedEvent } from "@/types/foresight";
@@ -29,8 +35,20 @@ function isConfigured(): boolean {
   return !!(
     process.env.TXLINE_AUTH_URL &&
     process.env.TXLINE_API_URL &&
-    process.env.WALLET_KEYPAIR_PATH
+    (process.env.TXLINE_API_TOKEN ||
+      process.env.WALLET_KEYPAIR_PATH ||
+      process.env.WALLET_KEYPAIR_B64)
   );
+}
+
+async function getApiToken(jwt: string): Promise<string> {
+  if (process.env.TXLINE_API_TOKEN) return process.env.TXLINE_API_TOKEN;
+  const proof = await buildWalletProof(jwt, { serviceLevelId: 12, durationWeeks: 4 });
+  return activateToken(jwt, {
+    txSig: proof.txSig,
+    walletSignature: proof.walletSignature,
+    leagues: proof.leagues,
+  });
 }
 
 function openLogWriter(fixtureId: string): fs.WriteStream {
@@ -72,13 +90,11 @@ export async function GET(request: NextRequest) {
         };
 
         const jwt = await guestStart();
-        const proof = await buildWalletProof(jwt, { serviceLevelId: 12, durationWeeks: 4 });
-        const apiToken = await activateToken(jwt, {
-          txSig: proof.txSig,
-          walletSignature: proof.walletSignature,
-          leagues: proof.leagues,
-        });
+        const apiToken = await getApiToken(jwt);
         const auth = { jwt, apiToken };
+
+        const meta = await fetchFixtureMeta(auth, fixtureId);
+        const p1IsHome = meta?.participant1IsHome ?? true;
 
         const queue: UnifiedEvent[] = [];
         let resolve: (() => void) | null = null;
@@ -92,7 +108,7 @@ export async function GET(request: NextRequest) {
 
         (async () => {
           try {
-            for await (const tick of streamOdds(auth, fixtureId, abort.signal)) {
+            for await (const tick of streamOdds(auth, fixtureId, abort.signal, p1IsHome)) {
               enqueue(tick);
             }
           } catch { /* closed */ }
@@ -100,7 +116,7 @@ export async function GET(request: NextRequest) {
 
         (async () => {
           try {
-            for await (const ev of streamScores(auth, fixtureId, abort.signal)) {
+            for await (const ev of streamScores(auth, fixtureId, abort.signal, p1IsHome)) {
               enqueue(ev);
             }
           } catch { /* closed */ }

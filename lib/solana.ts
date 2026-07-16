@@ -86,8 +86,18 @@ function resolveKeypairPath(p: string): string {
   return p.startsWith("~") ? path.join(os.homedir(), p.slice(1)) : p;
 }
 
-/** Load a keypair from a JSON secret-key byte array on disk. */
+/**
+ * Load the server wallet keypair. Prefers `WALLET_KEYPAIR_B64` (a base64-encoded
+ * JSON secret-key array) so the app runs on hosts with no writable filesystem
+ * (Vercel); falls back to the on-disk keypair file for local dev. An explicit
+ * `filePath` always wins.
+ */
 export function loadKeypair(filePath?: string): Keypair {
+  const b64 = process.env.WALLET_KEYPAIR_B64;
+  if (!filePath && b64) {
+    const raw = JSON.parse(Buffer.from(b64, "base64").toString("utf-8")) as number[];
+    return Keypair.fromSecretKey(Uint8Array.from(raw));
+  }
   const p = resolveKeypairPath(filePath ?? config.solana.walletKeypairPath);
   const raw = JSON.parse(fs.readFileSync(p, "utf-8")) as number[];
   return Keypair.fromSecretKey(Uint8Array.from(raw));

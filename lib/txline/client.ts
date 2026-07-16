@@ -106,20 +106,74 @@ async function* sse<T>(
         else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
       }
       if (event === "heartbeat" || dataLines.length === 0) continue;
-      yield JSON.parse(dataLines.join("\n")) as T;
+      // Skip malformed frames instead of throwing — one bad line must not kill
+      // the whole stream mid-match.
+      let parsed: T;
+      try {
+        parsed = JSON.parse(dataLines.join("\n")) as T;
+      } catch {
+        continue;
+      }
+      yield parsed;
     }
   }
 }
 
-/** Live, normalized 1X2 odds ticks. */
+/** Fixture metadata we need to label sides correctly (home/away, team names). */
+export interface FixtureMeta {
+  participant1IsHome: boolean;
+  home: string;
+  away: string;
+  competition: string;
+}
+
+interface RawFixtureMeta {
+  FixtureId: number;
+  Participant1: string;
+  Participant2: string;
+  Participant1IsHome: boolean;
+  Competition: string;
+}
+
+/**
+ * Look up a fixture in the snapshot so streams can label home/away correctly.
+ * Best-effort: returns null on any failure (callers default to participant1=home).
+ */
+export async function fetchFixtureMeta(
+  auth: TxlineAuth,
+  fixtureId: string,
+): Promise<FixtureMeta | null> {
+  try {
+    const res = await fetch(`${config.txline.apiUrl}/fixtures/snapshot`, {
+      headers: { ...authHeaders(auth), Accept: "application/json" },
+    });
+    if (!res.ok) return null;
+    const list = (await res.json()) as RawFixtureMeta[];
+    const f = list.find((x) => String(x.FixtureId) === fixtureId);
+    if (!f) return null;
+    const p1Home = f.Participant1IsHome !== false;
+    return {
+      participant1IsHome: p1Home,
+      home: p1Home ? f.Participant1 : f.Participant2,
+      away: p1Home ? f.Participant2 : f.Participant1,
+      competition: f.Competition,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Live, normalized odds ticks (level Asian Handicap → home/away win prob). */
 export async function* streamOdds(
   auth: TxlineAuth,
   fixtureId?: string,
   signal?: AbortSignal,
+  p1IsHome = true,
 ): AsyncGenerator<OddsTick> {
   const url = withFixture(`${config.txline.apiUrl}${txlineEndpoints.oddsStream}`, fixtureId);
   for await (const raw of sse<RawOddsPayload>(url, auth, signal)) {
-    const tick = normalizeOdds(raw);
+    if (fixtureId && String(raw.FixtureId) !== fixtureId) continue;
+    const tick = normalizeOdds(raw, p1IsHome);
     if (tick) yield tick;
   }
 }
@@ -129,12 +183,13 @@ export async function* streamScores(
   auth: TxlineAuth,
   fixtureId?: string,
   signal?: AbortSignal,
+  p1IsHome = true,
 ): AsyncGenerator<ScoreEvent> {
   const url = withFixture(`${config.txline.apiUrl}${txlineEndpoints.scoresStream}`, fixtureId);
   for await (const raw of sse<RawScorePayload>(url, auth, signal)) {
     // TxLINE score stream may include all live fixtures; filter to the requested one.
     if (fixtureId && String(raw.FixtureId) !== fixtureId) continue;
-    yield normalizeScore(raw);
+    yield normalizeScore(raw, p1IsHome);
   }
 }
 

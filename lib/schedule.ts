@@ -4,10 +4,14 @@ export interface Fixture {
   time: string; // HH:MM UTC
   home: string;
   away: string;
-  round: "Group Stage" | "Round of 32";
+  round: "Group Stage" | "Round of 32" | "Semi-final" | "Final" | "Friendly";
 }
 
 export const FIXTURES: Fixture[] = [
+  // ── Live now / upcoming (real fixture IDs from TxLINE fixtures snapshot) ────
+  { fixtureId: "18257865", date: "2026-07-18", time: "21:00", home: "France",  away: "England",   round: "Semi-final" },
+  { fixtureId: "18257739", date: "2026-07-19", time: "19:00", home: "Spain",   away: "Argentina", round: "Final" },
+  { fixtureId: "18143850", date: "2026-07-18", time: "12:00", home: "Vietnam", away: "Myanmar",   round: "Friendly" },
   // ── Group Stage ──────────────────────────────────────────────────────────
   { fixtureId: "17588316", date: "2026-06-14", time: "01:00", home: "Haiti",          away: "Scotland",            round: "Group Stage" },
   { fixtureId: "17926689", date: "2026-06-14", time: "04:00", home: "Australia",      away: "Turkey",              round: "Group Stage" },
