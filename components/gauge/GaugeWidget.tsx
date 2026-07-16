@@ -36,7 +36,8 @@ export function GaugeWidget({
   fixtureId,
   homeTeam = "HOME",
   awayTeam = "AWAY",
-}: { fixtureId?: string; homeTeam?: string; awayTeam?: string } = {}) {
+  forceDemo = false,
+}: { fixtureId?: string; homeTeam?: string; awayTeam?: string; forceDemo?: boolean } = {}) {
   const [frame, setFrame] = useState<ForesightFrame | null>(null);
   const [mode, setMode] = useState<"synthetic" | "live">("synthetic");
   const [liveConnected, setLiveConnected] = useState(false);
@@ -45,8 +46,11 @@ export function GaugeWidget({
   const [calling, setCalling] = useState(false);
   const [receipt, setReceipt] = useState<{ txSig: string; explorerUrl: string } | null>(null);
   const [callError, setCallError] = useState<string | null>(null);
+  const [muted, setMuted] = useState(true);
   const lastSeenSeq = useRef<number | undefined>(undefined);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wasBrewing = useRef(false);
+  const audioRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
     let liveEs: EventSource | null = null;
@@ -108,11 +112,17 @@ export function GaugeWidget({
     };
 
     gotLiveFrame = false;
-    openLive();
-    // If no live frame within 6s (e.g. no match in play), show the demo.
-    fallbackTimer = setTimeout(() => {
-      if (!gotLiveFrame) openSynthetic();
-    }, 6000);
+    if (forceDemo) {
+      // Skip the live attempt — go straight to the scripted match. Used for the
+      // guided demo / walkthrough so the brewing moment always plays.
+      openSynthetic();
+    } else {
+      openLive();
+      // If no live frame within 6s (e.g. no match in play), show the demo.
+      fallbackTimer = setTimeout(() => {
+        if (!gotLiveFrame) openSynthetic();
+      }, 6000);
+    }
 
     // Reset connection state on teardown (also runs before reconnecting to a new
     // fixture) — avoids a synchronous setState in the effect body.
@@ -124,12 +134,51 @@ export function GaugeWidget({
       synthEs?.close();
       if (flashTimer.current) clearTimeout(flashTimer.current);
     };
-  }, [fixtureId]);
+  }, [fixtureId, forceDemo]);
 
   const ant = frame?.anticipation ?? 0;
   const brewing = frame?.brewing ?? false;
   const momentum = frame?.momentum ?? 0;
   const isLive = mode === "live";
+
+  // Alert the fan the instant a goal starts brewing — a haptic buzz + a short
+  // rising tone (opt-in; the bell toggle unlocks audio with a user gesture).
+  useEffect(() => {
+    if (brewing && !wasBrewing.current && !muted) {
+      navigator.vibrate?.([40, 30, 60]);
+      const ctx = audioRef.current;
+      if (ctx) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(660, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(990, ctx.currentTime + 0.18);
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.14, ctx.currentTime + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.36);
+      }
+    }
+    wasBrewing.current = brewing;
+  }, [brewing, muted]);
+
+  const toggleAlerts = () => {
+    setMuted((m) => {
+      const next = !m;
+      if (!next && !audioRef.current) {
+        try {
+          const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+          audioRef.current = new AC();
+        } catch {}
+      }
+      audioRef.current?.resume?.();
+      if (!next) navigator.vibrate?.(20); // confirm haptic works
+      return next;
+    });
+  };
   // Prefer team names from the live feed (works for any fixture, not just the
   // ones hard-coded in the schedule); fall back to props.
   const homeLabel = liveMeta?.home ?? homeTeam;
@@ -169,7 +218,27 @@ export function GaugeWidget({
 
   return (
     <>
-    <div className="flex w-full max-w-md flex-col items-center gap-6 rounded-3xl border border-line bg-surface p-8 shadow-[0_1px_2px_rgba(10,14,20,0.04),0_14px_34px_rgba(10,14,20,0.05)]">
+    <div className="flex w-full max-w-md flex-col items-center gap-6 rounded-3xl border border-line bg-surface p-6 shadow-[0_1px_2px_rgba(10,14,20,0.04),0_14px_34px_rgba(10,14,20,0.05)] sm:p-8">
+      {/* Header: competition label + alerts toggle */}
+      <div className="flex w-full items-center justify-between">
+        <span className="font-mono text-[10px] uppercase tracking-wider text-muted">
+          {liveMeta?.competition ?? (isLive ? "Live" : "Demo match")}
+        </span>
+        <button
+          type="button"
+          onClick={toggleAlerts}
+          aria-label={muted ? "Enable goal alerts (sound + vibration)" : "Mute goal alerts"}
+          aria-pressed={!muted}
+          className={`rounded-full border px-2.5 py-1 font-mono text-[11px] transition-colors ${
+            muted
+              ? "border-line text-muted hover:text-ink"
+              : "border-hot/40 bg-hot/5 text-hot"
+          }`}
+        >
+          {muted ? "🔕 alerts" : "🔔 alerts on"}
+        </button>
+      </div>
+
       {/* Arc gauge */}
       <div className="relative">
         <svg

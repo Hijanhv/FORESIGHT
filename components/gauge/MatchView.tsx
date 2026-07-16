@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GaugeWidget } from "./GaugeWidget";
 import { MatchList } from "@/components/schedule/MatchList";
 import { FIXTURES } from "@/lib/schedule";
@@ -8,6 +8,16 @@ import { FIXTURES } from "@/lib/schedule";
 export function MatchView() {
   const [input, setInput] = useState("");
   const [fixtureId, setFixtureId] = useState<string | undefined>(undefined);
+  const [forceDemo, setForceDemo] = useState(false);
+
+  // `?demo=1` forces the scripted match (guided walkthrough / screenshots).
+  // Read once on mount — the query string is client-only on this static page.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("demo")) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time URL read on mount
+      setForceDemo(true);
+    }
+  }, []);
 
   const fixture = fixtureId ? FIXTURES.find((f) => f.fixtureId === fixtureId) : undefined;
 
@@ -62,6 +72,7 @@ export function MatchView() {
           fixtureId={fixtureId}
           homeTeam={fixture?.home}
           awayTeam={fixture?.away}
+          forceDemo={forceDemo}
         />
       </div>
 

@@ -26,13 +26,19 @@ export const metadata: Metadata = {
   description:
     "A real-time match companion that surfaces the momentum-vs-market gap and lights up when a goal is brewing. Powered by TxLINE live odds + events.",
   applicationName: "Foresight",
+  manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Foresight" },
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export const viewport: Viewport = {
   themeColor: "#f6f8fb",
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
