@@ -10,6 +10,31 @@ Built for the **TxODDS World Cup Hackathon** (Consumer & Fan Experiences track) 
 
 **▶ Live app: https://foresight-psi-eight.vercel.app**  ·  **Repo: https://github.com/Hijanhv/FORESIGHT**
 
+> Try it in ten seconds: open the link on your phone and add `?demo=1` for a guided, scripted match that plays the "goal brewing" moment on a loop.
+
+---
+
+## See it in action
+
+<table>
+<tr>
+<td width="33%" valign="top">
+<img src="docs/shot-gauge.png" alt="The anticipation gauge lit up at 67 — a goal is brewing" />
+<br /><sub><b>🔥 Brewing.</b> Pressure high (67), score still 0–0, market asleep at 46% — a goal is coming.</sub>
+</td>
+<td width="33%" valign="top">
+<img src="docs/shot-called-it.png" alt="A Called It receipt recorded on Solana" />
+<br /><sub><b>Called It.</b> One tap writes a tamper-evident Solana receipt — verify it on Solscan.</sub>
+</td>
+<td width="33%" valign="top">
+<img src="docs/shot-schedule.png" alt="The World Cup schedule with live and finished fixtures" />
+<br /><sub><b>Every game.</b> The whole World Cup — tap any fixture to watch its gauge.</sub>
+</td>
+</tr>
+</table>
+
+<sub>Screenshots are the live production app (phone viewport). The gauge, scoreline, stats and receipt are all real.</sub>
+
 ---
 
 ## Table of contents
