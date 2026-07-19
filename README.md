@@ -88,9 +88,9 @@ A single, phone-first screen:
 - **Market win-probability bars:** the sharp money's read, straight from TxLINE.
 - **Live Signal Feed:** every goal, card and **odds shift** the instant it happens, colour-coded. The whole "alert me to everything" experience, in-app, with no bot to install.
 - **Match Stats:** real per-side corners and cards from the feed, each one **verifiable on Solana**.
-- **"Called It":** when it's brewing, tap *I feel it* to mint a tamper-evident Solana receipt. If the goal then lands, the app calls it: **✓ You called it, before the market moved.**
+- **"Called It":** when it's brewing, connect your Solana wallet (one free signature, no transaction) and tap *I feel it* to mint a tamper-evident receipt **stamped with your wallet**. If the goal then lands, the app calls it: **✓ You called it, before the market moved.**
 
-No wallet, no signup, no friction. It opens straight to a live gauge (a scripted demo match plays whenever nothing is live, so the screen is never blank).
+No signup, no friction: it opens straight to a live gauge (a scripted demo match plays whenever nothing is live, so the screen is never blank). Watching is walletless; **proving** a call takes one free wallet signature, no SOL and no transaction.
 
 ---
 
@@ -126,15 +126,28 @@ Every knob lives in `DEFAULT_PARAMS`, tunable against replays.
 
 Two features make the data *provably real* and give fans skin in the game. Both are pure `@solana/web3.js`, no custom program to audit, and **both are verified working on mainnet**:
 
-### 1. "Called It": a receipt for your read
+### 1. "Called It": a receipt for your read, signed in with your wallet
 
-When the gauge is brewing and a fan taps **I feel it**, the server writes a Solana **memo** encoding the exact claim:
+First-time callers **sign in with Solana**: connect a wallet (Phantom / Solflare / Backpack) and sign a free ownership message, Ed25519, **no transaction and no SOL**, verified server-side. It's a plain [Sign-In-With-Solana](#sign-in-with-solana) handshake, no wallet-adapter stack. From then on, when the gauge is brewing and a fan taps **I feel it**, the server writes a Solana **memo** encoding the exact claim, now **stamped with the fan's wallet**:
 
 ```
-Foresight · Called It 🔥 | Spain v Argentina | 85:00 | anticipation 88% vs market 44% | 1-1 | 2026-07-16T20:06:00Z
+Foresight · Called It 🔥 | Spain v Argentina | 85:00 | anticipation 88% vs market 44% | 1-1 | by 9ExbZjAa…cKaA | 2026-07-16T20:06:00Z
 ```
 
-That's a timestamped, tamper-evident, shareable proof they saw it coming *before the market moved*, with a Solscan link. Real mainnet example: [`3drsCh2M…NWkqi`](https://solscan.io/tx/3drsCh2MjLUo16mmKGec9zCVUaqZZreBWTwMuuP2dpUdmr5y69nqVYEARcCHUKrATUV6un8u8LHQrAw5tM2NWkqi).
+That's a timestamped, tamper-evident, shareable proof *they* saw it coming *before the market moved*, with a Solscan link. Real mainnet example: [`3drsCh2M…NWkqi`](https://solscan.io/tx/3drsCh2MjLUo16mmKGec9zCVUaqZZreBWTwMuuP2dpUdmr5y69nqVYEARcCHUKrATUV6un8u8LHQrAw5tM2NWkqi).
+
+#### Sign-In-With-Solana
+
+The fan proves wallet ownership without a password, an email, or a transaction:
+
+```
+GET  /api/auth/nonce   → server issues a stateless, HMAC-signed nonce
+     wallet.signMessage → the fan signs "…sign in with your Solana account…"
+POST /api/auth/verify  → server rebuilds the exact message, verifies the
+                         Ed25519 signature, sets an httpOnly session cookie
+```
+
+No new dependency: the signature is verified with Node's built-in `crypto` (wrapping the public key in an SPKI envelope, the mirror of how `lib/solana.ts` signs). Nonces and sessions are stateless HMACs, so nothing has to be stored between requests, it survives serverless cold starts. The server still pays gas for the memo, so the fan needs **zero SOL** to get an attributed, on-chain receipt.
 
 ### 2. "Verified on Solana": every stat, provably anchored
 
@@ -170,19 +183,20 @@ We didn't test against mocks. We tested against **the real World Cup feed**, and
 | 4 | Live stats arrive as **duplicate "confirmed" + interleaved "possible"** events; naive counting double-counted or flickered. | Drive pressure/flashes from **Stats-snapshot deltas**, immune to feed noise. |
 | 5 | Malformed SSE frame, or `setState`-in-effect lint error. | Skip bad frames without killing the stream; effect cleanup. |
 
-**The suite (21 tests, all passing):**
+**The suite (29 tests, all passing):**
 
 - **Engine unit tests:** the synthetic "corner barrage → goal" arc trips `brewing` *before* the goal.
 - **Real-data regression:** replays all 1,243 captured events and asserts the true final state (**3-2, corners 8-8, a yellow each**), that the **score never goes backwards** (the empty-`Stats` regression), monotonic corner accumulation, non-zero peak anticipation, and that real goals/corners flash to the UI.
 - **Odds normalization:** pins the real Asian-Handicap shape (level line → win prob, non-level lines & `NA` ignored, `Participant1IsHome` respected).
+- **Sign-In-With-Solana:** a generated keypair signs the exact sign-in message and the server accepts it, then rejects a wrong signer, a wrong domain, a tampered nonce, and a forged/expired session, proving the auth fails closed.
 
 ```bash
-npm test      # 21 passed
+npm test      # 29 passed
 npm run build # clean production build, TypeScript strict
 npm run lint  # clean
 ```
 
-**End-to-end, verified on mainnet:** guest auth → on-chain `subscribe` → token activation → live SSE → engine → UI, plus a real "Called It" memo tx and a real stat-validation proof. All confirmed against `https://txline.txodds.com` and Solana mainnet-beta, both locally and **on the live Vercel deployment**.
+**End-to-end, verified on mainnet:** guest auth → on-chain `subscribe` → token activation → live SSE → engine → UI, plus wallet sign-in, a real "Called It" memo tx and a real stat-validation proof. All confirmed against `https://txline.txodds.com` and Solana mainnet-beta, both locally and **on the live Vercel deployment**.
 
 ---
 
@@ -208,6 +222,7 @@ It's a living demo of exactly what TxLINE sells: **verifiable, real-time sports 
 - **Next.js 16** (App Router, Route Handlers, Turbopack) + **React 19** + **Tailwind CSS v4**
 - **TypeScript**, strict; **Vitest** for tests
 - **@solana/web3.js** + **@solana/spl-token** (Token-2022), no custom on-chain program
+- **Sign-In-With-Solana** wallet auth: Ed25519 verified with Node `crypto`, stateless HMAC nonces + sessions, **no wallet-adapter dependency**
 - **TxLINE** SSE data layer · **Solana mainnet-beta**
 - Deployed on **Vercel**, auto-deploying from GitHub
 
@@ -235,6 +250,7 @@ cp .env.example .env.local
 | `TXLINE_API_TOKEN` | *(recommended)* a pre-activated token that skips the on-chain subscribe on every cold start |
 | `WALLET_KEYPAIR_PATH` | Local keypair file (for subscribe + "Called It") |
 | `WALLET_KEYPAIR_B64` | Base64 keypair for hosts with no filesystem (Vercel) |
+| `AUTH_SECRET` | Secret for signing Sign-In-With-Solana nonces + session cookies (HMAC). **Required in production**; `openssl rand -base64 32` |
 
 ---
 
@@ -260,18 +276,22 @@ app/
     live/route.ts        Live TxLINE ingestion → engine → SSE frames
     gauge/route.ts       Synthetic demo SSE (no network/token)
     record/route.ts      Live ingestion + writes logs/*.jsonl for replay
-    called-it/route.ts   POST → Solana memo receipt ("Called It")
+    called-it/route.ts   POST → Solana memo receipt ("Called It"), gated on sign-in
     verify-stat/route.ts GET  → TxLINE Merkle proof ("Verified on Solana")
+    auth/                Sign-In-With-Solana: nonce · verify · me · logout
   page.tsx               Landing + gauge
 
 components/gauge/         GaugeWidget, MatchStats, MatchView
 components/schedule/      MatchList (World Cup schedule)
+components/wallet/        WalletProvider (SIWS context) · ConnectButton
 
 lib/
   engine/anticipation.ts Deterministic reducer: events → ForesightFrame
   txline/                 client (auth + SSE) · normalize · types · __fixtures__ (real match)
   replay/                 time-faithful replay harness + synthetic match
   solana.ts              subscribe · activation signing · Called-It memo
+  auth.ts                Sign-In-With-Solana: nonce · signature verify · session
+  auth-message.ts        Isomorphic sign-in message builder (client + server)
   schedule.ts            World Cup fixtures
 
 types/foresight.ts       Shared engine ↔ UI contract

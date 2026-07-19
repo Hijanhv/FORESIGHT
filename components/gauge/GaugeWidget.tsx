@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ForesightFrame, PitchEvent } from "@/types/foresight";
 import { GamePhase } from "@/types/foresight";
+import { useWallet } from "@/components/wallet/WalletProvider";
 import { MatchStats } from "./MatchStats";
 
 const PHASE_LABEL: Record<number, string> = {
@@ -86,8 +87,9 @@ export function GaugeWidget({
   const [flash, setFlash] = useState<PitchEvent | null>(null);
   const [feed, setFeed] = useState<Signal[]>([]);
   const [calling, setCalling] = useState(false);
-  const [receipt, setReceipt] = useState<{ txSig: string; explorerUrl: string } | null>(null);
+  const [receipt, setReceipt] = useState<{ txSig: string; explorerUrl: string; calledByShort?: string } | null>(null);
   const [callError, setCallError] = useState<string | null>(null);
+  const { wallet, connecting, signIn } = useWallet();
   const [verdict, setVerdict] = useState<{ deltaSec: number } | null>(null);
   const [muted, setMuted] = useState(true);
 
@@ -278,9 +280,23 @@ export function GaugeWidget({
   };
 
   const handleCallIt = async () => {
-    if (!frame || calling) return;
-    setCalling(true);
+    if (!frame || calling || connecting) return;
     setCallError(null);
+
+    // Attribution first: the fan proves wallet ownership (free signature) so
+    // their address lands in the on-chain receipt. One tap does both.
+    let signer = wallet;
+    if (!signer) {
+      setCalling(true);
+      signer = await signIn();
+      setCalling(false);
+      if (!signer) {
+        setCallError("Connect your Solana wallet to call it.");
+        return;
+      }
+    }
+
+    setCalling(true);
     setVerdict(null);
     calledAt.current = { clock: frame.clockSeconds, total: frame.homeScore + frame.awayScore };
     try {
@@ -298,9 +314,14 @@ export function GaugeWidget({
           awayScore: frame.awayScore,
         }),
       });
-      const data = (await res.json()) as { txSig?: string; explorerUrl?: string; error?: string };
+      const data = (await res.json()) as {
+        txSig?: string;
+        explorerUrl?: string;
+        calledByShort?: string;
+        error?: string;
+      };
       if (!res.ok || !data.txSig) throw new Error(data.error ?? "Failed to record on-chain");
-      setReceipt({ txSig: data.txSig, explorerUrl: data.explorerUrl ?? "" });
+      setReceipt({ txSig: data.txSig, explorerUrl: data.explorerUrl ?? "", calledByShort: data.calledByShort });
     } catch (err) {
       setCallError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -418,14 +439,22 @@ export function GaugeWidget({
         {frame && !receipt && (
           <button
             onClick={handleCallIt}
-            disabled={calling}
+            disabled={calling || connecting}
             className={`relative w-full rounded-xl border px-4 py-3 font-display text-[12px] font-semibold uppercase tracking-wider transition-all disabled:opacity-60 ${
               brewing
                 ? "shimmer border-hot bg-hot text-white"
                 : "border-ink/15 bg-black/[0.02] text-ink hover:border-hot/60 hover:text-hot"
             }`}
           >
-            {calling ? "recording on Solana…" : brewing ? "🔥 Call it · I feel a goal coming" : "Call it · record your read on-chain"}
+            {connecting
+              ? "connect your wallet…"
+              : calling
+                ? "recording on Solana…"
+                : !wallet
+                  ? "◎ Connect wallet to call it"
+                  : brewing
+                    ? "🔥 Call it · I feel a goal coming"
+                    : "Call it · record your read on-chain"}
           </button>
         )}
 
@@ -437,6 +466,11 @@ export function GaugeWidget({
             <div className="mt-1 font-mono text-[10px] text-muted break-all">
               {receipt.txSig.slice(0, 8)}…{receipt.txSig.slice(-8)}
             </div>
+            {receipt.calledByShort && (
+              <div className="mt-0.5 font-mono text-[10px] text-muted">
+                by ◎ {receipt.calledByShort}
+              </div>
+            )}
             <div className="mt-2 flex items-center justify-center gap-3">
               <a href={receipt.explorerUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-cool underline decoration-dotted hover:text-hot">
                 view on Solscan ↗

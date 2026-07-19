@@ -1,6 +1,7 @@
 import { FsLockup } from "@/components/brand/logo";
 import { PixelHeatmap } from "@/components/brand/PixelHeatmap";
 import { MatchView } from "@/components/gauge/MatchView";
+import { ConnectButton } from "@/components/wallet/ConnectButton";
 
 // thermal ramp (cool → hot) for the scale legend — matches the gauge + heatmap
 const THERMAL = [
@@ -14,10 +15,13 @@ export default function Home() {
       {/* nav */}
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
         <FsLockup size={30} />
-        <span className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
-          <span className="h-1.5 w-1.5 rounded-full bg-goal ping-dot" />
-          Solana mainnet · live
-        </span>
+        <div className="flex items-center gap-4">
+          <span className="hidden items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted sm:inline-flex">
+            <span className="h-1.5 w-1.5 rounded-full bg-goal ping-dot" />
+            Solana mainnet · live
+          </span>
+          <ConnectButton />
+        </div>
       </header>
       <div className="mx-auto w-full max-w-6xl px-6"><div className="hairline" /></div>
 

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Archivo, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { WalletProvider } from "@/components/wallet/WalletProvider";
 
 // Archivo — a clean neo-grotesque; used large, uppercase and tightly tracked
 // for an engineered, editorial feel (display + body).
@@ -45,7 +46,9 @@ export default function RootLayout({
       lang="en"
       className={`${display.variable} ${mono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <WalletProvider>{children}</WalletProvider>
+      </body>
     </html>
   );
 }

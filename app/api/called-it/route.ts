@@ -12,8 +12,14 @@
 
 import type { NextRequest } from "next/server";
 import { postCalledIt } from "@/lib/solana";
+import { readSession } from "@/lib/auth";
+import { SESSION_COOKIE } from "@/lib/auth-message";
 
 export const dynamic = "force-dynamic";
+
+function shortWallet(addr: string): string {
+  return `${addr.slice(0, 4)}…${addr.slice(-4)}`;
+}
 
 function hasWallet(): boolean {
   return !!(process.env.WALLET_KEYPAIR_PATH || process.env.WALLET_KEYPAIR_B64);
@@ -47,6 +53,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Attribute the receipt to the signed-in fan: they must prove wallet
+  // ownership (Sign-In-With-Solana) before we stamp their address on-chain.
+  const session = readSession(request.cookies.get(SESSION_COOKIE)?.value);
+  if (!session) {
+    return Response.json(
+      { error: "Connect your Solana wallet to call it." },
+      { status: 401 },
+    );
+  }
+
   const now = Date.now();
   if (now - lastPostAt < MIN_INTERVAL_MS) {
     return Response.json({ error: "Too fast. Try again in a moment." }, { status: 429 });
@@ -69,7 +85,8 @@ export async function POST(request: NextRequest) {
 
   const memo =
     `Foresight · Called It 🔥 | ${home} v ${away} | ${at} | ` +
-    `anticipation ${ant}% vs market ${mkt}% | ${score} | ${new Date(now).toISOString()}`;
+    `anticipation ${ant}% vs market ${mkt}% | ${score} | by ${session.wallet} | ` +
+    `${new Date(now).toISOString()}`;
 
   try {
     const receipt = await postCalledIt(memo);
@@ -78,7 +95,12 @@ export async function POST(request: NextRequest) {
       receipt.cluster === "mainnet-beta"
         ? `${base}${receipt.txSig}`
         : `${base}${receipt.txSig}?cluster=devnet`;
-    return Response.json({ ...receipt, explorerUrl });
+    return Response.json({
+      ...receipt,
+      explorerUrl,
+      calledBy: session.wallet,
+      calledByShort: shortWallet(session.wallet),
+    });
   } catch (err) {
     lastPostAt = 0; // allow a retry on failure
     return Response.json({ error: String(err) }, { status: 500 });
