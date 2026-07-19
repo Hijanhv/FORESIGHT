@@ -24,9 +24,9 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Foresight — feel a goal coming before it happens",
+  title: "Foresight — feel the goal coming before the market does",
   description:
-    "A real-time match companion that surfaces the momentum-vs-market gap and lights up when a goal is brewing. Powered by TxLINE live odds + events.",
+    "The trading-desk sixth sense, for every fan. Foresight turns TxLINE live odds + pitch events into a glowing gauge that lights up the instant a goal is brewing — verified on Solana.",
   applicationName: "Foresight",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Foresight" },
