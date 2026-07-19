@@ -299,8 +299,9 @@ export function GaugeWidget({
     setCalling(true);
     setVerdict(null);
     calledAt.current = { clock: frame.clockSeconds, total: frame.homeScore + frame.awayScore };
-    try {
-      const res = await fetch("/api/called-it", {
+
+    const post = () =>
+      fetch("/api/called-it", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -314,6 +315,16 @@ export function GaugeWidget({
           awayScore: frame.awayScore,
         }),
       });
+
+    try {
+      let res = await post();
+      // Session expired server-side while the UI still shows connected —
+      // re-establish it once and retry so the tap doesn't dead-end.
+      if (res.status === 401) {
+        const re = await signIn();
+        if (!re) throw new Error("Connect your Solana wallet to call it.");
+        res = await post();
+      }
       const data = (await res.json()) as {
         txSig?: string;
         explorerUrl?: string;

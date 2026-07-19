@@ -196,7 +196,7 @@ npm run build # clean production build, TypeScript strict
 npm run lint  # clean
 ```
 
-**End-to-end, verified on mainnet:** guest auth → on-chain `subscribe` → token activation → live SSE → engine → UI, plus wallet sign-in, a real "Called It" memo tx and a real stat-validation proof. All confirmed against `https://txline.txodds.com` and Solana mainnet-beta, both locally and **on the live Vercel deployment**.
+**End-to-end, verified on mainnet:** guest auth → on-chain `subscribe` → token activation → live SSE → engine → UI, plus wallet sign-in, a real "Called It" memo tx and a real stat-validation proof. All confirmed against `https://txline.txodds.com` and Solana mainnet-beta, both locally and **on the live Vercel deployment**. The **Sign-In-With-Solana handshake** (nonce → wallet signature → httpOnly session cookie) is smoke-tested against the live production URL on every change, with no SOL spent.
 
 ---
 

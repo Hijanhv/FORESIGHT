@@ -81,8 +81,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
     setConnecting(true);
     try {
-      const { publicKey } = await provider.connect();
-      const address = publicKey.toString();
+      const conn = await provider.connect();
+      // Most wallets return { publicKey }; a few resolve connect() without it
+      // and expose it on the provider instead — accept either.
+      const pk = conn?.publicKey ?? provider.publicKey;
+      if (!pk) throw new Error("Wallet did not return an address.");
+      const address = pk.toString();
 
       const nonceRes = await fetch("/api/auth/nonce");
       if (!nonceRes.ok) throw new Error("Could not start sign-in.");
