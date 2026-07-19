@@ -19,12 +19,12 @@ Built for the **TxODDS World Cup Hackathon** (Consumer & Fan Experiences track) 
 <table>
 <tr>
 <td width="33%" valign="top">
-<img src="docs/shot-gauge.png" alt="The anticipation gauge lit up at 67 — a goal is brewing" />
-<br /><sub><b>🔥 Brewing.</b> Pressure high (67), score still 0–0, market asleep at 46% — a goal is coming.</sub>
+<img src="docs/shot-gauge.png" alt="The anticipation gauge lit up — a goal is brewing" />
+<br /><sub><b>🔥 Brewing.</b> Anticipation high, score still 0–0, market asleep at 46% — the gauge glows <em>before</em> the goal, and one tap records your read on-chain.</sub>
 </td>
 <td width="33%" valign="top">
-<img src="docs/shot-called-it.png" alt="A Called It receipt recorded on Solana" />
-<br /><sub><b>Called It.</b> One tap writes a tamper-evident Solana receipt — verify it on Solscan.</sub>
+<img src="docs/shot-feed.png" alt="The live signal feed — goals, cards and odds shifts" />
+<br /><sub><b>Live signal feed.</b> Every goal, card and odds shift the instant it happens — colour-coded, in-app, no bot to install.</sub>
 </td>
 <td width="33%" valign="top">
 <img src="docs/shot-schedule.png" alt="The World Cup schedule with live and finished fixtures" />
@@ -33,7 +33,7 @@ Built for the **TxODDS World Cup Hackathon** (Consumer & Fan Experiences track) 
 </tr>
 </table>
 
-<sub>Screenshots are the live production app (phone viewport). The gauge, scoreline, stats and receipt are all real.</sub>
+<sub>Screenshots are the live production app (phone viewport). The gauge, scoreline, stats and feed are all real.</sub>
 
 ---
 
@@ -74,13 +74,13 @@ High pressure **and** a flat market → `anticipation` climbs → **🔥 a goal 
 
 A single, phone-first screen:
 
-- **The anticipation gauge** — a 0–100 arc that sweeps cool → hot and pulses when a goal is brewing.
+- **The anticipation gauge** — a glowing 0–100 arc that sweeps cool → hot, blooms and pulses when a goal is brewing (with an opt-in sound + haptic alert).
 - **Live score, clock & phase** — including extra time and penalties.
 - **Momentum bar** — which side is pressing, right now.
 - **Market win-probability bars** — the sharp money's read, straight from TxLINE.
+- **Live Signal Feed** — every goal, card and **odds shift** the instant it happens, colour-coded — the whole "alert me to everything" experience, in-app, with no bot to install.
 - **Match Stats** — real per-side corners and cards from the feed, each one **verifiable on Solana**.
-- **Event flashes** — goals, cards and corners as they happen.
-- **"Called It"** — when it's brewing, tap *I feel it* to mint a tamper-evident Solana receipt that you read the goal before the market did.
+- **"Called It"** — when it's brewing, tap *I feel it* to mint a tamper-evident Solana receipt. If the goal then lands, the app calls it: **✓ You called it — before the market moved.**
 
 No wallet, no signup, no friction — it opens straight to a live gauge (a scripted demo match plays whenever nothing is live, so the screen is never blank).
 

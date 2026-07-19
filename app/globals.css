@@ -1,21 +1,27 @@
 @import "tailwindcss";
 
-/* Foresight brand tokens — light theme (see ~/foresight-brand) */
+/* ─────────────────────────────────────────────────────────────────────────
+   Foresight — "night-stadium broadcast HUD"
+   Deep dark canvas · electric cyan → neon rose spectrum · glowing gauge hero.
+   The single brand move: cool (market baseline) heats to hot (🔥 brewing).
+   ──────────────────────────────────────────────────────────────────────── */
 @theme {
-  --color-ink: #0a0e14;
-  --color-canvas: #f6f8fb;
-  --color-surface: #ffffff;
-  --color-muted: #6b7686;
-  --color-line: rgba(10, 14, 20, 0.1);
+  --color-bg: #05070e;
+  --color-canvas: #070b16;
+  --color-surface: #0c1120;
+  --color-ink: #eaf0fb;
+  --color-muted: #7f8ca6;
+  --color-line: rgba(130, 150, 190, 0.14);
 
-  /* the single brand move: cool -> hot */
-  --color-cool: #0ea5c4; /* market baseline */
-  --color-mid: #f59e0b;
-  --color-hot: #f2542d; /* anticipation / 🔥 brewing */
+  /* neon temperature spectrum */
+  --color-cool: #21e5ff; /* electric cyan — the market baseline */
+  --color-mid: #ffc233; /* amber — heating up */
+  --color-hot: #ff2e6e; /* neon rose — anticipation / 🔥 brewing */
+  --color-goal: #37ffb4; /* neon mint — a goal lands */
 
-  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  --font-display: var(--font-chakra), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jbmono), ui-monospace, monospace;
 }
 
 html,
@@ -24,11 +30,171 @@ body {
 }
 
 body {
-  background:
-    radial-gradient(1100px 640px at 82% -10%, rgba(242, 84, 45, 0.06), transparent 60%),
-    radial-gradient(900px 560px at 8% 4%, rgba(14, 165, 196, 0.06), transparent 55%),
-    var(--color-canvas);
+  background: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  position: relative;
+  overflow-x: hidden;
 }
+
+/* Drifting aurora — three neon blobs breathing behind everything.
+   Fixed + blurred = atmosphere with almost no layout cost. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -20% -10% -10% -10%;
+  z-index: -2;
+  background:
+    radial-gradient(38% 44% at 78% 8%, rgba(255, 46, 110, 0.20), transparent 60%),
+    radial-gradient(36% 40% at 12% 18%, rgba(33, 229, 255, 0.18), transparent 62%),
+    radial-gradient(50% 46% at 50% 108%, rgba(55, 255, 180, 0.10), transparent 60%);
+  filter: blur(28px) saturate(1.15);
+  animation: aurora 22s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+/* Fine grid + grain — a broadcast/telemetry texture, very subtle. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(130, 150, 190, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(130, 150, 190, 0.05) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(120% 90% at 50% 0%, #000 20%, transparent 78%);
+  -webkit-mask-image: radial-gradient(120% 90% at 50% 0%, #000 20%, transparent 78%);
+  opacity: 0.6;
+}
+
+@keyframes aurora {
+  0%   { transform: translate3d(0, 0, 0) scale(1); opacity: 0.9; }
+  50%  { transform: translate3d(-3%, 2%, 0) scale(1.08); opacity: 1; }
+  100% { transform: translate3d(3%, -2%, 0) scale(1.04); opacity: 0.85; }
+}
+
+/* ── reusable atmosphere ──────────────────────────────────────────────── */
+
+/* Glassy telemetry panel */
+.glass {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  border: 1px solid rgba(140, 160, 200, 0.16);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 24px 60px -24px rgba(0, 0, 0, 0.8);
+}
+
+/* A hot, breathing edge for the whole card when a goal is brewing */
+.brewing-ring {
+  box-shadow:
+    0 0 0 1px rgba(255, 46, 110, 0.5),
+    0 0 34px -4px rgba(255, 46, 110, 0.55),
+    0 0 90px -20px rgba(255, 46, 110, 0.4),
+    0 24px 60px -24px rgba(0, 0, 0, 0.8);
+  animation: breathe 1.5s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(255,46,110,0.35), 0 0 26px -6px rgba(255,46,110,0.4), 0 24px 60px -24px rgba(0,0,0,0.8); }
+  50%      { box-shadow: 0 0 0 1px rgba(255,46,110,0.7), 0 0 46px -2px rgba(255,46,110,0.75), 0 0 120px -20px rgba(255,46,110,0.5), 0 24px 60px -24px rgba(0,0,0,0.8); }
+}
+
+/* Screen-edge vignette that pulses when brewing (mounted at page root) */
+.brewing-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  box-shadow: inset 0 0 180px -40px rgba(255, 46, 110, 0.6);
+  animation: breathe 1.5s ease-in-out infinite;
+}
+
+/* Neon shimmer sweep for the "Call it" CTA */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.28) 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: shimmer 2.2s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0%   { transform: translateX(-120%); }
+  60%, 100% { transform: translateX(120%); }
+}
+
+/* Item entering the live signal feed */
+@keyframes signal-in {
+  0%   { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.signal-in { animation: signal-in 0.42s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+
+/* Big event flash pop */
+@keyframes flash-pop {
+  0%   { opacity: 0; transform: translateY(6px) scale(0.9); }
+  18%  { opacity: 1; transform: translateY(0) scale(1.04); }
+  30%  { transform: scale(1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.flash-pop { animation: flash-pop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+
+/* Rising embers when brewing (spans placed by JS) */
+@keyframes ember {
+  0%   { opacity: 0; transform: translateY(0) scale(0.6); }
+  15%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-90px) scale(1.1); }
+}
+
+/* Soft hero-title entrance */
+@keyframes rise-in {
+  0%   { opacity: 0; transform: translateY(14px); filter: blur(6px); }
+  100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+.rise-in { animation: rise-in 0.7s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+
+/* Live status dot */
+@keyframes ping-dot {
+  0%   { box-shadow: 0 0 0 0 rgba(55, 255, 180, 0.55); }
+  70%  { box-shadow: 0 0 0 7px rgba(55, 255, 180, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(55, 255, 180, 0); }
+}
+.ping-dot { animation: ping-dot 1.8s ease-out infinite; }
+
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+
+/* Logo: the predictive spark breathing ahead of the curve */
+@keyframes orb-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.22); opacity: 0.82; }
+}
+@keyframes trail-twinkle {
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 0.9; }
+}
+@keyframes arc-draw {
+  from { stroke-dashoffset: 100; }
+  to   { stroke-dashoffset: 0; }
+}
+
+/* Accessibility: honour reduced-motion — kill ambient/looping motion. */
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
+  .brewing-ring, .brewing-vignette, .shimmer::after, .ping-dot { animation: none; }
+  .signal-in, .flash-pop, .rise-in { animation-duration: 0.001ms; }
+  [style*="orb-pulse"], [style*="trail-twinkle"], [style*="arc-draw"] { animation: none !important; }
+}
+
+/* Selection + scrollbar polish */
+::selection { background: rgba(33, 229, 255, 0.25); color: #fff; }

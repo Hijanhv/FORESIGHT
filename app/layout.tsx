@@ -1,23 +1,25 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
+import { Chakra_Petch, Sora, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const display = Space_Grotesk({
+// Chakra Petch — squared, technical, broadcast-scoreboard energy (display + data).
+const display = Chakra_Petch({
   subsets: ["latin"],
-  variable: "--font-space-grotesk",
+  variable: "--font-chakra",
   weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
-const sans = Inter({
+// Sora — geometric, modern, highly legible body.
+const sans = Sora({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-sora",
   display: "swap",
 });
 
 const mono = JetBrains_Mono({
   subsets: ["latin"],
-  variable: "--font-jetbrains-mono",
+  variable: "--font-jbmono",
   display: "swap",
 });
 
@@ -35,7 +37,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f6f8fb",
+  themeColor: "#05070e",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

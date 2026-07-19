@@ -48,20 +48,20 @@ export function MatchView() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Fixture ID — or leave blank for demo"
-            className="flex-1 rounded-full border border-line bg-surface px-4 py-2 font-mono text-[11px] text-ink placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-cool/40"
+            className="flex-1 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 font-mono text-[11px] text-ink placeholder:text-muted backdrop-blur focus:outline-none focus:ring-1 focus:ring-cool/50"
           />
           {fixtureId ? (
             <button
               type="button"
               onClick={handleClear}
-              className="rounded-full border border-line px-4 py-2 font-mono text-[11px] text-muted transition-colors hover:border-hot/30 hover:text-hot"
+              className="rounded-full border border-white/10 px-4 py-2 font-mono text-[11px] text-muted transition-colors hover:border-hot/40 hover:text-hot"
             >
               clear
             </button>
           ) : (
             <button
               type="submit"
-              className="rounded-full border border-cool/30 bg-cool/5 px-4 py-2 font-mono text-[11px] text-cool transition-colors hover:bg-cool/10"
+              className="rounded-full border border-cool/40 bg-cool/10 px-4 py-2 font-mono text-[11px] text-cool transition-colors hover:bg-cool/20"
             >
               watch
             </button>

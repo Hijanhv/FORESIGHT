@@ -34,34 +34,30 @@ function FixtureRow({
   return (
     <button
       onClick={() => onSelect(fixture.fixtureId)}
-      className="w-full flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-neutral-100 hover:border-sky-300 hover:shadow-sm transition-all text-left group"
+      className="group flex w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-left transition-all hover:border-cool/40 hover:bg-white/[0.04]"
     >
-      <span className="text-xs font-mono text-neutral-400 w-11 shrink-0 tabular-nums">
+      <span className="w-11 shrink-0 font-mono text-xs tabular-nums text-muted">
         {fixture.time}
-        <span className="text-[10px] block leading-none text-neutral-300">UTC</span>
+        <span className="block text-[10px] leading-none text-muted/60">UTC</span>
       </span>
 
-      <div className="flex-1 min-w-0">
-        <span className="text-sm font-medium text-neutral-800">
-          {fixture.home}
-        </span>
-        <span className="text-xs text-neutral-400 mx-1.5">vs</span>
-        <span className="text-sm font-medium text-neutral-800">
-          {fixture.away}
-        </span>
+      <div className="min-w-0 flex-1">
+        <span className="text-sm font-medium text-ink">{fixture.home}</span>
+        <span className="mx-1.5 text-xs text-muted">vs</span>
+        <span className="text-sm font-medium text-ink">{fixture.away}</span>
       </div>
 
       {live && (
-        <span className="flex items-center gap-1 text-xs font-mono text-red-500 shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+        <span className="flex shrink-0 items-center gap-1 font-mono text-xs text-hot">
+          <span className="h-1.5 w-1.5 rounded-full bg-hot ping-dot" />
           LIVE
         </span>
       )}
       {!live && finished && (
-        <span className="text-xs font-mono text-neutral-300 shrink-0">FT</span>
+        <span className="shrink-0 font-mono text-xs text-muted/50">FT</span>
       )}
       {!live && !finished && (
-        <span className="text-xs font-mono text-sky-400 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <span className="shrink-0 font-mono text-xs text-cool opacity-0 transition-opacity group-hover:opacity-100">
           watch →
         </span>
       )}
@@ -83,20 +79,20 @@ export function MatchList({ onSelect }: { onSelect: (fixtureId: string) => void 
   if (grouped.length === 0) return null;
 
   return (
-    <section className="w-full max-w-lg mx-auto mt-10 px-4 pb-16">
-      <h2 className="text-xs font-mono uppercase tracking-widest text-neutral-400 mb-5">
+    <section data-shot="schedule" className="mx-auto mt-10 w-full max-w-lg px-4 pb-16">
+      <h2 className="mb-5 font-mono text-xs uppercase tracking-[0.22em] text-muted">
         World Cup 2026 · Schedule
       </h2>
 
       <div className="flex flex-col gap-8">
         {grouped.map(([date, fixtures]) => (
           <div key={date}>
-            <div className="flex items-center gap-3 mb-3">
-              <span className="text-xs font-mono text-neutral-500">
+            <div className="mb-3 flex items-center gap-3">
+              <span className="font-mono text-xs text-muted">
                 {date === today ? "Today" : formatDate(date)}
               </span>
-              <div className="flex-1 h-px bg-neutral-100" />
-              <span className="text-xs font-mono text-neutral-300">
+              <div className="h-px flex-1 bg-white/10" />
+              <span className="font-mono text-xs text-muted/60">
                 {fixtures[0].round}
               </span>
             </div>
