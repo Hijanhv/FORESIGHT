@@ -1,10 +1,10 @@
 import type { CSSProperties } from "react";
 
 /**
- * Foresight mark — a rising momentum arc that sweeps cool → hot, with a bright
- * predictive spark breaking *ahead* of the curve and a dotted trajectory where
- * the market will follow. It draws the product thesis: you see the surge before
- * the odds catch up. Neon treatment for the dark broadcast UI.
+ * Foresight mark — a football-crest hexagon holding a live-signal pulse that
+ * rises and spikes into a bright predictive spark, whose trajectory (fading
+ * dots) breaks *past* the crest edge: you see beyond the play, before the odds
+ * catch up. Neon treatment for the dark broadcast UI.
  */
 export function FsMark({
   size = 40,
@@ -33,6 +33,15 @@ export function FsMark({
           <stop offset="0.5" stopColor="#FFC233" />
           <stop offset="1" stopColor="#FF2E6E" />
         </linearGradient>
+        <linearGradient id="fsCrest" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#21E5FF" stopOpacity="0.7" />
+          <stop offset="1" stopColor="#FF2E6E" stopOpacity="0.7" />
+        </linearGradient>
+        <radialGradient id="fsCrestFill" cx="0.5" cy="0.32" r="0.85">
+          <stop offset="0" stopColor="#21E5FF" stopOpacity="0.16" />
+          <stop offset="0.6" stopColor="#0e1a2e" stopOpacity="0.35" />
+          <stop offset="1" stopColor="#0e1a2e" stopOpacity="0.05" />
+        </radialGradient>
         <radialGradient id="fsOrb" cx="0.5" cy="0.5" r="0.5">
           <stop offset="0" stopColor="#FFFFFF" />
           <stop offset="0.45" stopColor="#FF7AA8" />
@@ -40,38 +49,38 @@ export function FsMark({
         </radialGradient>
       </defs>
 
-      {/* Faint full gauge track */}
-      <path
-        d="M15.74 49.26 A23 23 0 1 1 48.26 49.26"
-        fill="none"
-        stroke="#21E5FF"
-        strokeOpacity="0.14"
-        strokeWidth="2.5"
-        strokeLinecap="round"
+      {/* Crest badge */}
+      <polygon
+        points="19,10 45,10 57,32 45,54 19,54 7,32"
+        fill="url(#fsCrestFill)"
+        stroke="url(#fsCrest)"
+        strokeWidth="2.4"
+        strokeLinejoin="round"
       />
 
-      {/* The momentum curve so far — cool → hot, glowing */}
-      <path
-        d="M15.74 49.26 A23 23 0 0 1 45.19 14.16"
+      {/* Live-signal pulse rising to the spark */}
+      <polyline
+        points="14,38 22,38 26,41 30,35 34,43 40,20"
         fill="none"
         stroke="url(#fsArc)"
-        strokeWidth="5"
+        strokeWidth="3.2"
         strokeLinecap="round"
+        strokeLinejoin="round"
         pathLength={100}
         style={{
-          filter: "drop-shadow(0 0 3px rgba(33,229,255,0.5)) drop-shadow(0 0 4px rgba(255,46,110,0.45))",
+          filter: "drop-shadow(0 0 2.5px rgba(33,229,255,0.55)) drop-shadow(0 0 3px rgba(255,46,110,0.5))",
           ...(animated
             ? { strokeDasharray: 100, animation: "arc-draw 1.1s cubic-bezier(0.2,0.9,0.3,1) both" }
             : null),
         }}
       />
 
-      {/* Predicted trajectory — where the market is about to go */}
+      {/* Predicted trajectory — breaking past the crest edge */}
       <g fill="#FF2E6E">
         {[
-          { cx: 50.5, cy: 10.4, r: 1.5, o: 0.6 },
-          { cx: 55, cy: 8.2, r: 1.2, o: 0.4 },
-          { cx: 59, cy: 7, r: 1, o: 0.25 },
+          { cx: 45, cy: 15, r: 1.5, o: 0.6 },
+          { cx: 50, cy: 10, r: 1.2, o: 0.4 },
+          { cx: 55, cy: 6, r: 1, o: 0.24 },
         ].map((d, i) => (
           <circle
             key={i}
@@ -79,16 +88,12 @@ export function FsMark({
             cy={d.cy}
             r={d.r}
             opacity={d.o}
-            style={
-              animated
-                ? { animation: `trail-twinkle 1.6s ease-in-out ${i * 0.2}s infinite` }
-                : undefined
-            }
+            style={animated ? { animation: `trail-twinkle 1.6s ease-in-out ${i * 0.2}s infinite` } : undefined}
           />
         ))}
       </g>
 
-      {/* The signal — the spark you see coming, ahead of the curve */}
+      {/* The spark — the signal you see coming */}
       <g
         style={{
           transformBox: "fill-box",
@@ -97,8 +102,8 @@ export function FsMark({
           ...(animated ? { animation: "orb-pulse 1.7s ease-in-out infinite" } : null),
         }}
       >
-        <circle cx="45.19" cy="14.16" r="5.4" fill="url(#fsOrb)" />
-        <circle cx="45.19" cy="14.16" r="2" fill="#FFFFFF" />
+        <circle cx="40" cy="20" r="5" fill="url(#fsOrb)" />
+        <circle cx="40" cy="20" r="1.9" fill="#FFFFFF" />
       </g>
     </svg>
   );
@@ -125,7 +130,7 @@ export function FsLockup({
           letterSpacing: "0.16em",
           ...(gradient
             ? {
-                backgroundImage: "linear-gradient(90deg, #eaf0fb 30%, #21E5FF)",
+                backgroundImage: "linear-gradient(90deg, #eef3fc 30%, #21E5FF)",
                 WebkitBackgroundClip: "text",
                 backgroundClip: "text",
                 color: "transparent",
