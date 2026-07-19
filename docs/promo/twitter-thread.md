@@ -1,76 +1,68 @@
-# Foresight — launch thread (X / Twitter)
+# Foresight — X / Twitter launch thread
 
-Assets are in this folder. Suggested image per tweet noted in **[brackets]**.
-Live app: https://foresight-psi-eight.vercel.app · Repo: https://github.com/Hijanhv/FORESIGHT
+Post the numbered tweets as a thread. Image to attach is noted in **[brackets]** (all images are in this folder).
+Handles: **@TXODDSOfficial** (TxLINE / TxODDS) · **@solana**
+Live: https://foresight-psi-eight.vercel.app · Demo: https://youtu.be/ft3stLQtXUs
 
 ---
 
-## Option A — the punchy 6-tweet thread (recommended)
+## Recommended thread (5 tweets)
 
-**1/ (hook)** — **[tw-card.png]**
+**1/ — hook + video**  **[attach: tw-card.png, and paste the YouTube link so it unfurls]**
+We taught an app to feel a goal coming — *before* the odds move. ⚽🔥
+
+Meet **Foresight**: a live World Cup gauge that fires the instant on-pitch pressure spikes but the market's still asleep.
+
+Powered by @TXODDSOfficial TxLINE, live on @solana.
+
+60-sec demo 👇
+https://youtu.be/ft3stLQtXUs
+
+**2/ — the insight**  **[attach: brewing-gauge.png]**
 Pro traders know a secret casual fans don't:
 
-on-pitch pressure surges *before* the odds move.
+pressure surges BEFORE the betting odds reprice.
 
-We built Foresight to give that sixth sense to every fan — one number that fires the instant a goal is brewing. 🔥
+Foresight turns TxLINE's live odds + pitch events into one number. Pressure high, market flat → 🔥 BREWING.
 
-Live, on @solana 👇
+Score still 0–0. The gauge already knows.
 
-**2/** — **[brewing-gauge.png]**
-Meet the anticipation gauge.
-
-It fuses live pressure (corners, cards, momentum) against the betting market — and when pressure is high but the market's still asleep, it flares 🔥 BREWING.
-
-Score's still 0–0. The gauge already knows something's coming.
-
-**3/** — **[signal-feed.png]**
-Every goal, card and odds-shift the instant it happens — colour-coded, in-app, zero setup.
+**3/ — the experience**  **[attach: signal-feed.png]**
+Every goal, card and odds-shift the second it happens — colour-coded, in-app, zero setup.
 
 No bot to install, no group chat to mute. Just open it with a phone in your hand and *feel* the match.
 
-**4/** — **[brewing-hero-phone.png]**
-Here's the fun part: when it's brewing, tap **Call it**.
+**4/ — the part that isn't a mockup**  **[attach: onchain-receipt.png]**
+Here's the kicker: it's all real.
 
-If the goal then lands, Foresight confirms it: ✓ *You called it — before the market moved.*
+Tap "Call it" and your read is written to @solana as a **real mainnet transaction** — real memo, real signature, verify it yourself on-chain.
 
-Your read gets written to Solana as a tamper-evident receipt you can flex. 🧾
+Even sign-up runs on Solana (TxLINE's Token-2022 flow). No mock data.
 
-**5/**
-Powered end-to-end by @TxODDS' TxLINE live World Cup feed:
+**5/ — why it matters + CTA**  **[attach: schedule.png]**
+This is what @TXODDSOfficial TxLINE unlocks: verifiable, real-time sports data that consumer apps can actually build on.
 
-• real odds + score events over SSE
-• a deterministic engine turning them into the gauge
-• every stat verifiable on-chain via TxLINE's Merkle proofs
-
-Real data. Real chain. No mockups.
-
-**6/ (CTA)** — **[schedule.png]**
-It's live right now — open it on your phone:
-
+Try it (open on your phone):
 🔗 https://foresight-psi-eight.vercel.app
-(add ?demo=1 for a guided 30s walkthrough)
+(add ?demo=1 for a 30-sec guided run)
 
-Built for the @TxODDS World Cup Hackathon · Consumer & Fan track.
-Code: https://github.com/Hijanhv/FORESIGHT
+Built for the TxODDS World Cup Hackathon 🏆
 
 ---
 
-## Option B — single-tweet version (if you don't want a thread)
-
-**[tw-card.png]**
+## Single-tweet version  **[attach: tw-card.png + YouTube link]**
 Foresight lets you *feel a goal coming before the market does.* 🔥
 
-A live thermal gauge that fires when on-pitch pressure surges but the odds haven't moved — powered by @TxODDS TxLINE data, verified on @solana.
+A live thermal gauge that fires when on-pitch pressure spikes but the odds haven't — powered by @TXODDSOfficial TxLINE, every read verified on @solana.
 
-Tap "Call it," prove your read on-chain.
-
-▶ https://foresight-psi-eight.vercel.app
+▶ Demo: https://youtu.be/ft3stLQtXUs
+🔗 https://foresight-psi-eight.vercel.app
 
 ---
 
-## Notes / tips
-- Post **1/** with tw-card.png attached; attach the noted image to each numbered tweet.
-- Swap the @-handles if the real hackathon/company handles differ (verify @TxODDS).
-- Best posting window: right around a live match so people can open it and see real data.
-- Hashtags (use 1–2, not more): #WorldCup2026 #Solana
-- The em-dashes and 🔥 render fine on X; keep each tweet under 280 chars (all are).
+## Notes
+- **@TXODDSOfficial** is the confirmed TxODDS/TxLINE handle. Tag **@solana** too. Optionally add **@SuperteamEarn** (the hackathon host) on tweet 5.
+- Put the YouTube link in tweet 1 so X shows the video player; attach tw-card.png only if the link doesn't unfurl.
+- Hashtags (1–2 max, on the last tweet): #WorldCup2026 #Solana
+- Best time to post: right around a live match so people can open it and see real data move.
+- Every tweet is under 280 characters.

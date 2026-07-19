@@ -8,7 +8,15 @@ Foresight turns live World Cup odds and pitch events into an **anticipation engi
 
 Built for the **TxODDS World Cup Hackathon** (Consumer & Fan Experiences track) on Superteam Earn. Powered by **TxLINE** live data, verified on **Solana mainnet**.
 
-**▶ Live app: https://foresight-psi-eight.vercel.app**  ·  **Repo: https://github.com/Hijanhv/FORESIGHT**
+**▶ Live app: https://foresight-psi-eight.vercel.app**  ·  **🎥 Demo: https://youtu.be/ft3stLQtXUs**  ·  **Repo: https://github.com/Hijanhv/FORESIGHT**
+
+<p align="center">
+  <a href="https://youtu.be/ft3stLQtXUs">
+    <img src="docs/demo-thumb.jpg" alt="Watch the Foresight demo video" width="760" />
+  </a>
+  <br />
+  <sub><b>🎥 Watch the demo</b> · the live app, the on-chain Solana sign-up, and a real mainnet &ldquo;Called It&rdquo; transaction · <a href="https://youtu.be/ft3stLQtXUs">youtu.be/ft3stLQtXUs</a></sub>
+</p>
 
 > Try it in ten seconds: open the link on your phone and add `?demo=1` for a guided, scripted match that plays the "goal brewing" moment on a loop.
 
