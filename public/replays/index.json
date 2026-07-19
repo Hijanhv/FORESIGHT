@@ -1,0 +1,62 @@
+[
+  {
+    "fixtureId": "18172469",
+    "home": "Brazil",
+    "away": "Japan",
+    "round": "Round of 32",
+    "finalHome": 2,
+    "finalAway": 1,
+    "durationMin": 101,
+    "goals": 3,
+    "calledGoals": 2,
+    "peakAnticipation": 65
+  },
+  {
+    "fixtureId": "18175918",
+    "home": "Argentina",
+    "away": "Cape Verde",
+    "round": "Round of 32",
+    "finalHome": 3,
+    "finalAway": 2,
+    "durationMin": 123,
+    "goals": 5,
+    "calledGoals": 1,
+    "peakAnticipation": 84
+  },
+  {
+    "fixtureId": "18179764",
+    "home": "England",
+    "away": "Congo DR",
+    "round": "Round of 32",
+    "finalHome": 2,
+    "finalAway": 1,
+    "durationMin": 97,
+    "goals": 3,
+    "calledGoals": 1,
+    "peakAnticipation": 73
+  },
+  {
+    "fixtureId": "18175981",
+    "home": "France",
+    "away": "Sweden",
+    "round": "Round of 32",
+    "finalHome": 3,
+    "finalAway": 0,
+    "durationMin": 94,
+    "goals": 3,
+    "calledGoals": 1,
+    "peakAnticipation": 77
+  },
+  {
+    "fixtureId": "18257865",
+    "home": "France",
+    "away": "England",
+    "round": "Semi-final",
+    "finalHome": 4,
+    "finalAway": 6,
+    "durationMin": 98,
+    "goals": 10,
+    "calledGoals": 0,
+    "peakAnticipation": 51
+  }
+]

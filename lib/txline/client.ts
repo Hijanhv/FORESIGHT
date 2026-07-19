@@ -8,7 +8,7 @@
  */
 
 import { config, txlineEndpoints } from "@/lib/config";
-import type { OddsTick, ScoreEvent } from "@/types/foresight";
+import type { OddsTick, ScoreEvent, UnifiedEvent } from "@/types/foresight";
 import { normalizeOdds, normalizeScore } from "./normalize";
 import type {
   RawOddsPayload,
@@ -208,3 +208,120 @@ export async function fetchStatValidation(
 
 const withFixture = (url: string, fixtureId?: string) =>
   fixtureId ? `${url}?fixtureId=${encodeURIComponent(fixtureId)}` : url;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Historical replay — the "updates" endpoints return past odds/scores as plain
+// JSON arrays (no SSE), bucketed into 5-minute intervals. A whole finished match
+// is reconstructed by walking every 5-min bucket across its window and
+// normalizing the payloads into the SAME UnifiedEvent stream the live feed emits.
+// See docs.yaml: GET /{feed}/updates/{epochDay}/{hourOfDay}/{interval}.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function jsonHeaders(auth: TxlineAuth): HeadersInit {
+  return {
+    Authorization: `Bearer ${auth.jwt}`,
+    "X-Api-Token": auth.apiToken,
+    Accept: "application/json",
+  };
+}
+
+/** epoch-ms → the (epochDay, hourOfDay, interval) 5-minute bucket that contains it. */
+export function bucketOf(ts: number): { epochDay: number; hour: number; interval: number } {
+  const epochDay = Math.floor(ts / 86_400_000);
+  const ms = ts - epochDay * 86_400_000;
+  const hour = Math.floor(ms / 3_600_000);
+  const interval = Math.floor((ms - hour * 3_600_000) / 300_000); // 0..11
+  return { epochDay, hour, interval };
+}
+
+/** Enumerate every 5-minute bucket that overlaps [startTs, endTs] (inclusive). */
+function bucketsBetween(startTs: number, endTs: number) {
+  const out: Array<{ epochDay: number; hour: number; interval: number }> = [];
+  const first = Math.floor(startTs / 300_000) * 300_000;
+  for (let t = first; t <= endTs; t += 300_000) out.push(bucketOf(t));
+  return out;
+}
+
+async function fetchUpdatesBucket<T>(
+  feed: "odds" | "scores",
+  auth: TxlineAuth,
+  epochDay: number,
+  hour: number,
+  interval: number,
+  fixtureId?: string,
+): Promise<T[]> {
+  const base = `${config.txline.apiUrl}${txlineEndpoints.replay(feed, epochDay, hour, interval)}`;
+  const url = fixtureId ? `${base}?fixtureId=${encodeURIComponent(fixtureId)}` : base;
+  const res = await fetch(url, { headers: jsonHeaders(auth) });
+  if (res.status === 404) return []; // no data for that empty bucket
+  if (!res.ok) throw new Error(`${feed}/updates ${epochDay}/${hour}/${interval} → ${res.status}`);
+  const body = (await res.json()) as unknown;
+  return Array.isArray(body) ? (body as T[]) : [];
+}
+
+/** Run `tasks` with bounded concurrency, preserving completion (order re-sorted by caller). */
+async function pool<T>(items: T[], limit: number, worker: (item: T) => Promise<void>): Promise<void> {
+  let i = 0;
+  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (i < items.length) {
+      const idx = i++;
+      await worker(items[idx]);
+    }
+  });
+  await Promise.all(runners);
+}
+
+export interface FixtureHistory {
+  events: UnifiedEvent[];
+  oddsCount: number;
+  scoreCount: number;
+}
+
+/**
+ * Reconstruct a finished fixture's full event stream from the historical
+ * "updates" buckets between two epoch-ms timestamps. Odds are filtered by
+ * `normalizeOdds` to the level-line (draw-no-bet) market; scores keep every
+ * confirmed pitch event. Returns one sorted, deduped UnifiedEvent stream.
+ */
+export async function fetchFixtureHistory(
+  auth: TxlineAuth,
+  fixtureId: string,
+  startTs: number,
+  endTs: number,
+  opts: { concurrency?: number; p1IsHome?: boolean; onProgress?: (done: number, total: number) => void } = {},
+): Promise<FixtureHistory> {
+  const p1IsHome = opts.p1IsHome ?? true;
+  const buckets = bucketsBetween(startTs, endTs);
+  const odds: OddsTick[] = [];
+  const scores: ScoreEvent[] = [];
+  let done = 0;
+
+  await pool(buckets, opts.concurrency ?? 6, async (b) => {
+    const [rawOdds, rawScores] = await Promise.all([
+      fetchUpdatesBucket<RawOddsPayload>("odds", auth, b.epochDay, b.hour, b.interval, fixtureId),
+      fetchUpdatesBucket<RawScorePayload>("scores", auth, b.epochDay, b.hour, b.interval, fixtureId),
+    ]);
+    for (const p of rawOdds) {
+      if (String(p.FixtureId) !== fixtureId) continue;
+      const tick = normalizeOdds(p, p1IsHome);
+      if (tick) odds.push(tick);
+    }
+    for (const p of rawScores) {
+      if (String(p.FixtureId) !== fixtureId) continue;
+      scores.push(normalizeScore(p, p1IsHome));
+    }
+    done += 1;
+    opts.onProgress?.(done, buckets.length);
+  });
+
+  // De-dupe odds ticks that repeat the identical probability at the same ts, and
+  // score events by seq (buckets can overlap at boundaries).
+  const seenScore = new Set<number>();
+  const dedupScores = scores.filter((s) => (seenScore.has(s.seq) ? false : (seenScore.add(s.seq), true)));
+
+  const events: UnifiedEvent[] = [...odds, ...dedupScores].sort(
+    (a, b) => a.ts - b.ts || (a.kind === b.kind ? 0 : a.kind === "score" ? -1 : 1),
+  );
+
+  return { events, oddsCount: odds.length, scoreCount: dedupScores.length };
+}

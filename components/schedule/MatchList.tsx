@@ -24,9 +24,11 @@ function formatDate(dateStr: string): string {
 function FixtureRow({
   fixture,
   onSelect,
+  hasReplay,
 }: {
   fixture: Fixture;
   onSelect: (id: string) => void;
+  hasReplay: boolean;
 }) {
   const live = isLive(fixture);
   const finished = isFinished(fixture);
@@ -34,7 +36,11 @@ function FixtureRow({
   return (
     <button
       onClick={() => onSelect(fixture.fixtureId)}
-      className="group flex w-full items-center gap-3 rounded-xl border border-black/[0.08] bg-black/[0.015] px-4 py-3 text-left transition-all hover:border-cool/50 hover:bg-cool/[0.04]"
+      className={`group flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
+        hasReplay
+          ? "border-goal/30 bg-goal/[0.03] hover:border-goal/60 hover:bg-goal/[0.06]"
+          : "border-black/[0.08] bg-black/[0.015] hover:border-cool/50 hover:bg-cool/[0.04]"
+      }`}
     >
       <span className="w-11 shrink-0 font-mono text-xs tabular-nums text-muted">
         {fixture.time}
@@ -53,10 +59,13 @@ function FixtureRow({
           LIVE
         </span>
       )}
-      {!live && finished && (
+      {!live && hasReplay && (
+        <span className="shrink-0 font-mono text-xs text-goal">⟲ replay →</span>
+      )}
+      {!live && !hasReplay && finished && (
         <span className="shrink-0 font-mono text-xs text-muted/50">FT</span>
       )}
-      {!live && !finished && (
+      {!live && !hasReplay && !finished && (
         <span className="shrink-0 font-mono text-xs text-cool opacity-0 transition-opacity group-hover:opacity-100">
           watch →
         </span>
@@ -65,15 +74,27 @@ function FixtureRow({
   );
 }
 
-export function MatchList({ onSelect }: { onSelect: (fixtureId: string) => void }) {
+export function MatchList({
+  onSelect,
+  replayIds,
+}: {
+  onSelect: (fixtureId: string) => void;
+  replayIds?: Set<string>;
+}) {
   const today = new Date().toISOString().slice(0, 10);
+  const hasReplay = (id: string) => !!replayIds?.has(id);
 
   const live = FIXTURES.filter(isLive);
   const upcoming = FIXTURES.filter((f) => !isLive(f) && !isFinished(f));
-  // Always show recent results so the schedule is never empty between rounds.
-  const recentFinished = FIXTURES.filter(isFinished).slice(-12);
+  // Always show recent results so the schedule is never empty between rounds,
+  // and make sure every match that has a real-data replay is listed.
+  const replayFixtures = FIXTURES.filter((f) => hasReplay(f.fixtureId));
+  const recentFinished = FIXTURES.filter((f) => isFinished(f) && !hasReplay(f.fixtureId)).slice(-10);
 
-  const displayFixtures = [...live, ...upcoming, ...recentFinished];
+  const seen = new Set<string>();
+  const displayFixtures = [...live, ...upcoming, ...replayFixtures, ...recentFinished].filter(
+    (f) => (seen.has(f.fixtureId) ? false : (seen.add(f.fixtureId), true)),
+  );
   const grouped = groupByDate(displayFixtures);
 
   if (grouped.length === 0) return null;
@@ -98,7 +119,7 @@ export function MatchList({ onSelect }: { onSelect: (fixtureId: string) => void 
             </div>
             <div className="flex flex-col gap-2">
               {fixtures.map((f) => (
-                <FixtureRow key={f.fixtureId} fixture={f} onSelect={onSelect} />
+                <FixtureRow key={f.fixtureId} fixture={f} onSelect={onSelect} hasReplay={hasReplay(f.fixtureId)} />
               ))}
             </div>
           </div>
