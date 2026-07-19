@@ -11,11 +11,9 @@ Built for the **TxODDS World Cup Hackathon** (Consumer & Fan Experiences track) 
 **▶ Live app: https://foresight-psi-eight.vercel.app**  ·  **🎥 Demo: https://youtu.be/ft3stLQtXUs**  ·  **🐦 Thread: https://x.com/JanhaviChavada/status/2078805229458624926**  ·  **Repo: https://github.com/Hijanhv/FORESIGHT**
 
 <p align="center">
-  <a href="https://youtu.be/ft3stLQtXUs">
-    <img src="docs/demo-thumb.jpg" alt="Watch the Foresight demo video" width="760" />
-  </a>
+  <video src="https://raw.githubusercontent.com/Hijanhv/FORESIGHT/main/docs/foresight-walkthrough.mp4" poster="https://raw.githubusercontent.com/Hijanhv/FORESIGHT/main/docs/walkthrough-poster.jpg" controls muted loop playsinline width="760"></video>
   <br />
-  <sub><b>🎥 Watch the demo</b> · the live app, the on-chain Solana sign-up, and a real mainnet &ldquo;Called It&rdquo; transaction · <a href="https://youtu.be/ft3stLQtXUs">youtu.be/ft3stLQtXUs</a></sub>
+  <sub><b>🎥 Full walkthrough</b> · the wallet sign-in, the mobile gauge &amp; one-tap &ldquo;Called It&rdquo;, a real mainnet transaction, and a <b>past match replayed from real TxLINE data</b> where Foresight flagged the goal 207s before the market moved · <a href="https://raw.githubusercontent.com/Hijanhv/FORESIGHT/main/docs/foresight-walkthrough.mp4">download</a> · <a href="https://youtu.be/ft3stLQtXUs">older cut on YouTube</a></sub>
 </p>
 
 > Try it in ten seconds: open the link on your phone and add `?demo=1` for a guided, scripted match that plays the "goal brewing" moment on a loop.
