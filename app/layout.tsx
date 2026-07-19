@@ -1,19 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Chakra_Petch, Sora, JetBrains_Mono } from "next/font/google";
+import { Archivo, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-// Chakra Petch — squared, technical, broadcast-scoreboard energy (display + data).
-const display = Chakra_Petch({
+// Archivo — a clean neo-grotesque; used large, uppercase and tightly tracked
+// for an engineered, editorial feel (display + body).
+const display = Archivo({
   subsets: ["latin"],
-  variable: "--font-chakra",
+  variable: "--font-archivo",
   weight: ["400", "500", "600", "700"],
-  display: "swap",
-});
-
-// Sora — geometric, modern, highly legible body.
-const sans = Sora({
-  subsets: ["latin"],
-  variable: "--font-sora",
   display: "swap",
 });
 
@@ -26,7 +20,7 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Foresight — feel the goal coming before the market does",
   description:
-    "The trading-desk sixth sense, for every fan. Foresight turns TxLINE live odds + pitch events into a glowing gauge that lights up the instant a goal is brewing — verified on Solana.",
+    "The trading-desk sixth sense, for every fan. Foresight turns TxLINE live odds + pitch events into one number that lights up the instant a goal is brewing — verified on Solana.",
   applicationName: "Foresight",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Foresight" },
@@ -37,7 +31,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0e1a2e",
+  themeColor: "#ffffff",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -49,7 +43,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${display.variable} ${sans.variable} ${mono.variable} h-full antialiased`}
+      className={`${display.variable} ${mono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

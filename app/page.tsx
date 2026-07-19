@@ -1,73 +1,72 @@
 import { FsLockup } from "@/components/brand/logo";
+import { PixelHeatmap } from "@/components/brand/PixelHeatmap";
 import { MatchView } from "@/components/gauge/MatchView";
 
 export default function Home() {
   return (
     <div className="flex flex-1 flex-col">
       {/* nav */}
-      <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-6">
-        <FsLockup size={34} animated gradient />
-        <span className="inline-flex items-center gap-2 rounded-full border border-line bg-white/[0.03] px-3 py-1 font-mono text-[11px] tracking-wide text-muted backdrop-blur">
+      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
+        <FsLockup size={30} />
+        <span className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
           <span className="h-1.5 w-1.5 rounded-full bg-goal ping-dot" />
           Solana mainnet · live
         </span>
       </header>
+      <div className="mx-auto w-full max-w-6xl px-6"><div className="hairline" /></div>
 
-      {/* hero */}
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center gap-9 px-5 py-10 text-center sm:gap-11 sm:px-6 sm:py-16">
-        <div className="flex flex-col items-center gap-5">
-          <span
-            className="rise-in font-mono text-[11px] uppercase tracking-[0.32em] text-cool"
-            style={{ animationDelay: "0.05s" }}
-          >
-            Consumer &amp; Fan · World Cup 2026
-          </span>
+      {/* hero — editorial split: headline left, brief right */}
+      <section className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 px-6 py-12 md:grid-cols-[1.5fr_1fr] md:gap-12 md:py-16">
+        <div>
+          <p className="rise-in eyebrow" style={{ animationDelay: "0.04s" }}>
+            Consumer &amp; Fan — World Cup 2026
+          </p>
           <h1
-            className="rise-in max-w-3xl font-display text-4xl font-semibold uppercase leading-[1.05] tracking-tight text-ink sm:text-6xl"
-            style={{ animationDelay: "0.12s" }}
+            className="rise-in display-tight mt-5 text-[13vw] leading-[0.92] sm:text-6xl md:text-7xl"
+            style={{ animationDelay: "0.1s" }}
           >
-            Feel the goal coming
+            Feel the goal
             <br />
-            <span
-              style={{
-                backgroundImage: "linear-gradient(90deg, #21E5FF, #FFC233 55%, #FF2E6E)",
-                WebkitBackgroundClip: "text",
-                backgroundClip: "text",
-                color: "transparent",
-              }}
-            >
-              before the market does.
-            </span>
+            coming before
+            <br />
+            the market does<span className="text-hot">.</span>
           </h1>
+        </div>
+        <div className="flex flex-col justify-end gap-6">
           <p
-            className="rise-in max-w-xl text-base leading-7 text-muted sm:text-lg"
-            style={{ animationDelay: "0.2s" }}
+            className="rise-in max-w-sm text-[15px] leading-6 text-muted md:text-base"
+            style={{ animationDelay: "0.18s" }}
           >
             Pro traders know pressure surges{" "}
-            <em className="not-italic text-ink">before</em>{" "}
-            the odds move. Foresight turns TxLINE&rsquo;s live odds and pitch events into one
-            glowing number that lights up the instant a goal is brewing — the trading-desk sixth
-            sense, for every fan.
+            <span className="text-ink">before</span>{" "}
+            the odds move. Foresight turns TxLINE&rsquo;s live odds and pitch events into one number
+            — the trading-desk sixth sense, for every fan.
           </p>
-          <div
-            className="rise-in mt-1 flex flex-wrap items-center justify-center gap-2"
-            style={{ animationDelay: "0.28s" }}
-          >
-            <span className="rounded-full border border-cool/30 bg-cool/10 px-3 py-1 font-mono text-[11px] text-cool">
-              cool · market baseline
+          <div className="rise-in flex flex-wrap gap-2" style={{ animationDelay: "0.26s" }}>
+            <span className="rounded-full border border-cool/40 px-3 py-1 font-mono text-[11px] uppercase tracking-wide text-cool">
+              cool · market
             </span>
-            <span className="rounded-full border border-hot/40 bg-hot/10 px-3 py-1 font-mono text-[11px] text-hot">
+            <span className="rounded-full border border-hot/40 px-3 py-1 font-mono text-[11px] uppercase tracking-wide text-hot">
               hot · 🔥 brewing
             </span>
           </div>
         </div>
+      </section>
 
+      {/* signature: a live pitch-pressure heatmap dispersing into the page */}
+      <div className="relative w-full overflow-hidden" aria-hidden>
+        <PixelHeatmap height={200} intensity={0.5} />
+      </div>
+
+      {/* app */}
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-center px-5 py-12 sm:px-6">
         <MatchView />
       </main>
 
       {/* footer */}
-      <footer className="mx-auto w-full max-w-5xl px-6 py-8">
-        <p className="font-mono text-[11px] text-muted">
+      <footer className="mx-auto w-full max-w-6xl px-6 py-8">
+        <div className="hairline mb-5" />
+        <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted">
           Foresight · powered by TxLINE live odds + events · verified on Solana mainnet
         </p>
       </footer>

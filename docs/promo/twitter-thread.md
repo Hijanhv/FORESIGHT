@@ -12,7 +12,7 @@ Pro traders know a secret casual fans don't:
 
 on-pitch pressure surges *before* the odds move.
 
-We built Foresight to give that sixth sense to every fan — one glowing number that lights up the instant a goal is brewing. 🔥
+We built Foresight to give that sixth sense to every fan — one number that fires the instant a goal is brewing. 🔥
 
 Live, on @solana 👇
 
@@ -60,7 +60,7 @@ Code: https://github.com/Hijanhv/FORESIGHT
 **[tw-card.png]**
 Foresight lets you *feel a goal coming before the market does.* 🔥
 
-A live gauge that flares when on-pitch pressure surges but the odds haven't moved — powered by @TxODDS TxLINE data, verified on @solana.
+A live thermal gauge that fires when on-pitch pressure surges but the odds haven't moved — powered by @TxODDS TxLINE data, verified on @solana.
 
 Tap "Call it," prove your read on-chain.
 

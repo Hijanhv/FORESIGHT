@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ForesightFrame, PitchEvent } from "@/types/foresight";
 import { GamePhase } from "@/types/foresight";
 import { MatchStats } from "./MatchStats";
@@ -15,14 +15,20 @@ const PHASE_LABEL: Record<number, string> = {
   [GamePhase.EndedPens]: "FT (P)",
 };
 
+// thermal palette (light theme)
+const COOL = "#2B5CFF";
+const MID = "#FFBC1F";
+const HOT = "#FF2E3F";
+const GOAL = "#12B76A";
+
 function clock(s: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
 function antColor(ant: number, brewing: boolean) {
-  if (brewing) return "#FF2E6E";
-  if (ant > 0.6) return "#FFC233";
-  return "#21E5FF";
+  if (brewing) return HOT;
+  if (ant > 0.6) return MID;
+  return COOL;
 }
 
 // Smoothly count a displayed value toward its target (rAF eased).
@@ -49,12 +55,12 @@ function useCountUp(target: number, ms = 550) {
 
 const EVENT_CONFIG: Record<
   PitchEvent["kind"],
-  { label: string; icon: string; color: string; ring: string }
+  { label: string; icon: string; color: string }
 > = {
-  goal:   { label: "GOAL",        icon: "⚽", color: "#37FFB4", ring: "rgba(55,255,180,0.5)" },
-  yellow: { label: "YELLOW",      icon: "🟨", color: "#FFC233", ring: "rgba(255,194,51,0.5)" },
-  red:    { label: "RED CARD",    icon: "🟥", color: "#FF3B3B", ring: "rgba(255,59,59,0.55)" },
-  corner: { label: "CORNER",      icon: "⚑", color: "#21E5FF", ring: "rgba(33,229,255,0.45)" },
+  goal:   { label: "GOAL",     icon: "⚽", color: GOAL },
+  yellow: { label: "YELLOW",   icon: "🟨", color: MID },
+  red:    { label: "RED CARD", icon: "🟥", color: HOT },
+  corner: { label: "CORNER",   icon: "⚑", color: COOL },
 };
 
 type SignalKind = PitchEvent["kind"] | "brewing" | "odds";
@@ -98,7 +104,7 @@ export function GaugeWidget({
     setFeed((f) => [{ ...s, id: signalId.current++ }, ...f].slice(0, 6));
   };
 
-  // ── SSE pipeline (unchanged): prefer live TxLINE, fall back to scripted demo ──
+  // ── SSE pipeline: prefer live TxLINE, fall back to scripted demo ──
   useEffect(() => {
     let liveEs: EventSource | null = null;
     let synthEs: EventSource | null = null;
@@ -221,7 +227,6 @@ export function GaugeWidget({
   // Derive signals from each frame: events, brewing onset, and odds shifts.
   useEffect(() => {
     if (!frame) return;
-    // 1) pitch event (goal / card / corner)
     const ev = frame.lastEvent;
     if (ev && ev.seq !== lastSeenSeq.current) {
       lastSeenSeq.current = ev.seq;
@@ -232,27 +237,24 @@ export function GaugeWidget({
       const who = ev.side === "home" ? homeLabel : awayLabel;
       pushSignal({ kind: ev.kind, side: ev.side, color: cfg.color, text: `${cfg.icon} ${cfg.label} · ${who}`, detail: clock(ev.clockSeconds) });
       playAlert(ev.kind);
-      // "Called It" verdict — did a goal follow the read?
       if (ev.kind === "goal" && calledAt.current) {
         const delta = Math.max(0, ev.clockSeconds - calledAt.current.clock);
         setVerdict({ deltaSec: delta });
         calledAt.current = null;
       }
     }
-    // 2) brewing onset
     if (brewing && !wasBrewing.current) {
-      pushSignal({ kind: "brewing", color: "#FF2E6E", text: "🔥 GOAL BREWING", detail: `${Math.round(ant * 100)} vs mkt ${Math.round(marketProb * 100)}` });
+      pushSignal({ kind: "brewing", color: HOT, text: "🔥 GOAL BREWING", detail: `${Math.round(ant * 100)} vs mkt ${Math.round(marketProb * 100)}` });
       playAlert("brewing");
     }
     wasBrewing.current = brewing;
-    // 3) odds shift (>= 6pp move on the leading side, throttled 4s)
     const now = Date.now();
     const prev = lastOdds.current;
     if (prev == null) {
       lastOdds.current = { prob: marketProb, at: now };
     } else if (Math.abs(marketProb - prev.prob) >= 0.06 && now - prev.at > 4000) {
       const up = marketProb > prev.prob;
-      pushSignal({ kind: "odds", color: "#8B95FF", text: `📈 ODDS ${up ? "SHIFT ↑" : "SHIFT ↓"}`, detail: `${Math.round(prev.prob * 100)}→${Math.round(marketProb * 100)}%` });
+      pushSignal({ kind: "odds", color: "#6C5CE7", text: `📈 ODDS ${up ? "SHIFT ↑" : "SHIFT ↓"}`, detail: `${Math.round(prev.prob * 100)}→${Math.round(marketProb * 100)}%` });
       playAlert("odds");
       lastOdds.current = { prob: marketProb, at: now };
     }
@@ -306,46 +308,16 @@ export function GaugeWidget({
     }
   };
 
-  // Ember particles (only rendered while brewing) — random but stable.
-  const embers = useMemo(
-    () => Array.from({ length: 12 }, (_, i) => ({
-      left: 8 + (i * 7.3) % 84,
-      delay: (i * 0.37) % 2.4,
-      dur: 2 + ((i * 13) % 10) / 10,
-      size: 2 + (i % 3),
-    })),
-    [],
-  );
-
   return (
     <>
       {brewing && <div className="brewing-vignette" aria-hidden />}
 
       <div
         data-shot="gauge"
-        className={`relative flex w-full max-w-md flex-col items-center gap-6 rounded-3xl p-6 glass sm:p-7 ${
+        className={`relative flex w-full max-w-md flex-col items-center gap-6 rounded-2xl p-6 card sm:p-7 ${
           brewing ? "brewing-ring" : ""
         }`}
       >
-        {/* rising embers */}
-        {brewing && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-16 top-24 overflow-hidden" aria-hidden>
-            {embers.map((e, i) => (
-              <span
-                key={i}
-                className="absolute bottom-0 rounded-full"
-                style={{
-                  left: `${e.left}%`,
-                  width: e.size, height: e.size,
-                  background: "#FF2E6E",
-                  boxShadow: "0 0 6px 1px rgba(255,46,110,0.8)",
-                  animation: `ember ${e.dur}s ease-out ${e.delay}s infinite`,
-                }}
-              />
-            ))}
-          </div>
-        )}
-
         {/* Header: competition + alerts */}
         <div className="flex w-full items-center justify-between">
           <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
@@ -364,21 +336,14 @@ export function GaugeWidget({
           </button>
         </div>
 
-        {/* Arc gauge — the glowing hero */}
+        {/* Arc gauge */}
         <div className="relative">
-          <div
-            className="pointer-events-none absolute inset-0 rounded-full blur-2xl transition-opacity duration-500"
-            style={{
-              background: `radial-gradient(circle, ${antColor(ant, brewing)}${brewing ? "66" : "3a"}, transparent 70%)`,
-            }}
-            aria-hidden
-          />
           <svg viewBox="0 0 64 64" width={196} height={196} aria-label={`Anticipation: ${Math.round(ant * 100)}%`}>
             <defs>
               <linearGradient id="liveArc" gradientUnits="userSpaceOnUse" x1="9" y1="0" x2="55" y2="0">
-                <stop offset="0" stopColor="#21E5FF" />
-                <stop offset="0.5" stopColor="#FFC233" />
-                <stop offset="1" stopColor="#FF2E6E" />
+                <stop offset="0" stopColor={COOL} />
+                <stop offset="0.5" stopColor={MID} />
+                <stop offset="1" stopColor={HOT} />
               </linearGradient>
             </defs>
 
@@ -386,8 +351,8 @@ export function GaugeWidget({
             <path
               d="M15.74 49.26 A23 23 0 1 1 48.26 49.26"
               fill="none"
-              stroke="#21E5FF"
-              strokeOpacity="0.12"
+              stroke="#0A0A0A"
+              strokeOpacity="0.08"
               strokeWidth="4"
               strokeLinecap="round"
             />
@@ -400,24 +365,19 @@ export function GaugeWidget({
               strokeLinecap="round"
               pathLength={1}
               strokeDasharray={`${ant.toFixed(4)} 2`}
-              style={{
-                transition: "stroke-dasharray 0.5s ease",
-                filter: brewing
-                  ? "drop-shadow(0 0 5px rgba(255,46,110,0.95)) drop-shadow(0 0 12px rgba(255,46,110,0.55))"
-                  : `drop-shadow(0 0 5px rgba(33,229,255,${(0.3 + ant * 0.5).toFixed(2)}))`,
-              }}
+              style={{ transition: "stroke-dasharray 0.5s ease" }}
             />
           </svg>
 
           {/* Centre overlay */}
           <div className="absolute inset-0 flex flex-col items-center justify-center pb-9">
             <span
-              className="font-display text-5xl font-bold tabular-nums leading-none"
-              style={{ color: antColor(ant, brewing), transition: "color 0.4s ease", textShadow: `0 0 22px ${antColor(ant, brewing)}55` }}
+              className="font-display text-6xl font-bold tabular-nums leading-none"
+              style={{ color: antColor(ant, brewing), letterSpacing: "-0.04em", transition: "color 0.4s ease" }}
             >
               {Math.round(shownAnt)}
             </span>
-            <span className="mt-1 font-mono text-[9px] uppercase tracking-[0.22em]" style={{ color: antColor(ant, brewing) }}>
+            <span className="mt-1.5 font-mono text-[9px] uppercase tracking-[0.22em]" style={{ color: antColor(ant, brewing) }}>
               {brewing ? "🔥 brewing" : "anticipation"}
             </span>
             {frame && (
@@ -436,7 +396,7 @@ export function GaugeWidget({
               <span
                 key={flash.seq}
                 className="flash-pop flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-wider"
-                style={{ color: cfg.color, borderColor: cfg.ring, background: `${cfg.color}18`, boxShadow: `0 0 20px -4px ${cfg.ring}` }}
+                style={{ color: cfg.color, borderColor: `${cfg.color}55`, background: `${cfg.color}12` }}
               >
                 {cfg.icon} {cfg.label} · {flash.side === "home" ? homeLabel : awayLabel} · {clock(flash.clockSeconds)}
               </span>
@@ -444,10 +404,10 @@ export function GaugeWidget({
           })()}
         </div>
 
-        {/* "Called It" verdict — the payoff when the read lands */}
+        {/* "Called It" verdict */}
         {verdict && (
-          <div className="flash-pop w-full rounded-2xl border border-goal/40 bg-goal/10 px-4 py-3 text-center" style={{ boxShadow: "0 0 34px -8px rgba(55,255,180,0.5)" }}>
-            <div className="font-display text-sm font-semibold uppercase tracking-wide text-goal">
+          <div className="flash-pop w-full rounded-xl border border-goal/40 bg-goal/10 px-4 py-3 text-center">
+            <div className="font-display text-sm font-semibold uppercase tracking-wide" style={{ color: GOAL }}>
               ✓ You called it
             </div>
             <div className="mt-0.5 font-mono text-[10px] text-muted">
@@ -461,17 +421,16 @@ export function GaugeWidget({
           <button
             onClick={handleCallIt}
             disabled={calling}
-            className={`relative w-full rounded-2xl border px-4 py-3 font-display text-[12px] font-semibold uppercase tracking-wider transition-all disabled:opacity-60 ${
-              brewing ? "shimmer border-hot/50 bg-hot/15 text-hot" : "border-line text-muted hover:border-hot/40 hover:text-hot"
+            className={`relative w-full rounded-xl border px-4 py-3 font-display text-[12px] font-semibold uppercase tracking-wider transition-all disabled:opacity-60 ${
+              brewing ? "shimmer border-hot bg-hot text-white" : "border-line text-muted hover:border-hot/50 hover:text-hot"
             }`}
-            style={brewing ? { boxShadow: "0 0 28px -6px rgba(255,46,110,0.6)" } : undefined}
           >
             {calling ? "recording on Solana…" : brewing ? "🔥 Call it — I feel a goal coming" : "Call it — record your read on-chain"}
           </button>
         )}
 
         {receipt && (
-          <div className="w-full rounded-2xl border border-hot/40 bg-hot/10 px-4 py-3 text-center" style={{ boxShadow: "0 0 30px -10px rgba(255,46,110,0.5)" }}>
+          <div className="w-full rounded-xl border border-hot/40 bg-hot/5 px-4 py-3 text-center">
             <div className="font-display text-[12px] font-semibold uppercase tracking-wider text-hot">
               ✓ Called it — recorded on Solana
             </div>
@@ -495,7 +454,7 @@ export function GaugeWidget({
 
         {/* Score & clock */}
         <div className="text-center">
-          <div className="font-display text-4xl font-semibold tabular-nums text-ink" style={{ textShadow: "0 0 24px rgba(33,229,255,0.18)" }}>
+          <div className="font-display text-4xl font-bold tabular-nums text-ink" style={{ letterSpacing: "-0.03em" }}>
             {frame ? `${frame.homeScore} – ${frame.awayScore}` : "— – —"}
           </div>
           <div className="mt-1 font-mono text-[11px] text-muted">
@@ -512,18 +471,17 @@ export function GaugeWidget({
             <span>momentum</span>
             <span>{homeLabel}</span>
           </div>
-          <div className="relative h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+          <div className="relative h-1.5 overflow-hidden rounded-full bg-black/[0.07]">
             <div
               className="absolute top-0 h-full rounded-full"
               style={{
                 left: momentum >= 0 ? "50%" : `${(0.5 + momentum / 2) * 100}%`,
                 width: `${(Math.abs(momentum) / 2) * 100}%`,
-                background: momentum >= 0 ? "#FF2E6E" : "#21E5FF",
-                boxShadow: `0 0 10px ${momentum >= 0 ? "rgba(255,46,110,0.6)" : "rgba(33,229,255,0.6)"}`,
+                background: momentum >= 0 ? HOT : COOL,
                 transition: "left 0.4s ease, width 0.4s ease, background 0.4s ease",
               }}
             />
-            <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/20" />
+            <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-black/15" />
           </div>
         </div>
 
@@ -536,19 +494,19 @@ export function GaugeWidget({
             </div>
             {(twoWay
               ? [
-                  { label: homeLabel, prob: frame.homeProb, color: "#21E5FF" },
-                  { label: awayLabel, prob: frame.awayProb, color: "#FF2E6E" },
+                  { label: homeLabel, prob: frame.homeProb, color: COOL },
+                  { label: awayLabel, prob: frame.awayProb, color: HOT },
                 ]
               : [
-                  { label: homeLabel, prob: frame.homeProb, color: "#21E5FF" },
-                  { label: "DRAW", prob: frame.drawProb, color: "#7f8ca6" },
-                  { label: awayLabel, prob: frame.awayProb, color: "#FF2E6E" },
+                  { label: homeLabel, prob: frame.homeProb, color: COOL },
+                  { label: "DRAW", prob: frame.drawProb, color: "#7a7d84" },
+                  { label: awayLabel, prob: frame.awayProb, color: HOT },
                 ]
             ).map(({ label, prob, color }) => (
               <div key={label} className="flex items-center gap-2">
                 <span className="w-14 truncate font-mono text-[10px] text-muted">{label}</span>
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
-                  <div className="h-full rounded-full" style={{ width: `${prob * 100}%`, backgroundColor: color, boxShadow: `0 0 8px ${color}80`, transition: "width 0.4s ease" }} />
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/[0.07]">
+                  <div className="h-full rounded-full" style={{ width: `${prob * 100}%`, backgroundColor: color, transition: "width 0.4s ease" }} />
                 </div>
                 <span className="w-8 text-right font-mono text-[10px] tabular-nums text-ink">{Math.round(prob * 100)}%</span>
               </div>
@@ -560,7 +518,7 @@ export function GaugeWidget({
         <div className="pt-1">
           <span
             className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[9px] uppercase tracking-wider ${
-              isLive ? "border-hot/40 bg-hot/10 text-hot" : "border-line text-muted"
+              isLive ? "border-hot/40 bg-hot/5 text-hot" : "border-line text-muted"
             }`}
           >
             {isLive ? <span className="h-1.5 w-1.5 rounded-full bg-hot ping-dot" /> : "◎"}
@@ -569,17 +527,17 @@ export function GaugeWidget({
         </div>
       </div>
 
-      {/* Live Signal Feed — every goal, card & odds shift, the instant it happens */}
+      {/* Live Signal Feed */}
       {feed.length > 0 && (
-        <div data-shot="feed" className="mt-4 w-full max-w-md rounded-3xl p-5 glass">
+        <div data-shot="feed" className="mt-4 w-full max-w-md rounded-2xl p-5 card">
           <div className="mb-3 flex items-center justify-between">
             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted">Live signal feed</span>
             <span className="font-mono text-[9px] uppercase tracking-wider text-muted">goals · cards · odds</span>
           </div>
           <div className="flex flex-col gap-2">
             {feed.map((s) => (
-              <div key={s.id} className="signal-in flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: s.color, boxShadow: `0 0 8px ${s.color}` }} />
+              <div key={s.id} className="signal-in flex items-center gap-3 rounded-lg border border-black/[0.06] bg-black/[0.015] px-3 py-2">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: s.color }} />
                 <span className="flex-1 truncate font-mono text-[11px]" style={{ color: s.color }}>{s.text}</span>
                 {s.detail && <span className="shrink-0 font-mono text-[10px] tabular-nums text-muted">{s.detail}</span>}
               </div>

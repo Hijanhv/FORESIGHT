@@ -4,8 +4,8 @@ import { useState } from "react";
 import type { MatchStats as Stats, PitchEvent } from "@/types/foresight";
 
 // Home = cool, Away = hot — consistent with the gauge's probability bars.
-const HOME = "#21E5FF";
-const AWAY = "#FF2E6E";
+const HOME = "#2B5CFF";
+const AWAY = "#FF2E3F";
 
 // PitchEvent kind + side → TxLINE StatKey, so we can ask for its on-chain proof.
 const STAT_KEY: Record<PitchEvent["kind"], { home: number; away: number }> = {
@@ -45,12 +45,11 @@ function StatRow({ label, home, away }: { label: string; home: number; away: num
           {away}
         </span>
       </div>
-      <div className="mt-1.5 flex h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
+      <div className="mt-1.5 flex h-1.5 w-full overflow-hidden rounded-full bg-black/[0.07]">
         <div
           style={{
             width: `${homePct}%`,
             backgroundColor: total > 0 ? HOME : "transparent",
-            boxShadow: total > 0 ? `0 0 8px ${HOME}80` : undefined,
             transition: "width 0.4s ease",
           }}
         />
@@ -58,7 +57,6 @@ function StatRow({ label, home, away }: { label: string; home: number; away: num
           style={{
             width: `${100 - homePct}%`,
             backgroundColor: total > 0 ? AWAY : "transparent",
-            boxShadow: total > 0 ? `0 0 8px ${AWAY}80` : undefined,
             transition: "width 0.4s ease",
           }}
         />
@@ -110,7 +108,7 @@ export function MatchStats({
   };
 
   return (
-    <div className="mt-4 flex w-full max-w-md flex-col gap-4 rounded-3xl p-6 glass">
+    <div className="mt-4 flex w-full max-w-md flex-col gap-4 rounded-2xl p-6 card">
       <div className="flex items-center justify-between gap-2">
         <span className="max-w-[35%] truncate font-mono text-[11px] font-medium text-cool">
           {homeTeam}

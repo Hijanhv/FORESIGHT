@@ -1,4 +1,4 @@
-![Foresight — feel a goal coming before it happens](docs/banner.png)
+![Foresight — feel the goal coming before the market does](docs/banner.png)
 
 # Foresight
 
@@ -20,7 +20,7 @@ Built for the **TxODDS World Cup Hackathon** (Consumer & Fan Experiences track) 
 <tr>
 <td width="33%" valign="top">
 <img src="docs/shot-gauge.png" alt="The anticipation gauge lit up — a goal is brewing" />
-<br /><sub><b>🔥 Brewing.</b> Anticipation high, score still 0–0, market asleep at 46% — the gauge glows <em>before</em> the goal, and one tap records your read on-chain.</sub>
+<br /><sub><b>🔥 Brewing.</b> Anticipation high, score still 0–0, market asleep at 46% — the gauge fires red <em>before</em> the goal, and one tap records your read on-chain.</sub>
 </td>
 <td width="33%" valign="top">
 <img src="docs/shot-feed.png" alt="The live signal feed — goals, cards and odds shifts" />
@@ -74,7 +74,7 @@ High pressure **and** a flat market → `anticipation` climbs → **🔥 a goal 
 
 A single, phone-first screen:
 
-- **The anticipation gauge** — a glowing 0–100 arc that sweeps cool → hot, blooms and pulses when a goal is brewing (with an opt-in sound + haptic alert).
+- **The anticipation gauge** — a 0–100 thermal arc that sweeps cool (blue) → hot (red) and fires when a goal is brewing (with an opt-in sound + haptic alert), over a live pitch-pressure heatmap.
 - **Live score, clock & phase** — including extra time and penalties.
 - **Momentum bar** — which side is pressing, right now.
 - **Market win-probability bars** — the sharp money's read, straight from TxLINE.

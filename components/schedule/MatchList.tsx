@@ -34,7 +34,7 @@ function FixtureRow({
   return (
     <button
       onClick={() => onSelect(fixture.fixtureId)}
-      className="group flex w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-left transition-all hover:border-cool/40 hover:bg-white/[0.04]"
+      className="group flex w-full items-center gap-3 rounded-xl border border-black/[0.08] bg-black/[0.015] px-4 py-3 text-left transition-all hover:border-cool/50 hover:bg-cool/[0.04]"
     >
       <span className="w-11 shrink-0 font-mono text-xs tabular-nums text-muted">
         {fixture.time}
@@ -91,7 +91,7 @@ export function MatchList({ onSelect }: { onSelect: (fixtureId: string) => void 
               <span className="font-mono text-xs text-muted">
                 {date === today ? "Today" : formatDate(date)}
               </span>
-              <div className="h-px flex-1 bg-white/10" />
+              <div className="h-px flex-1 bg-black/10" />
               <span className="font-mono text-xs text-muted/60">
                 {fixtures[0].round}
               </span>
