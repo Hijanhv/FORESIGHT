@@ -3,9 +3,14 @@
  * engine consumes. Anything uncertain about the vendor enums is localized here
  * and flagged — swap the lookups once the API-reference enum tables are pinned.
  *
- * Verified against real World Cup streams (see `__fixtures__/`): the odds feed
- * carries **no 1X2 market** — only de-margined Asian Handicap (`part1/part2`),
- * so the "market brain" is the level-line (draw-no-bet) win probability.
+ * Verified against real World Cup streams (see `__fixtures__/`): the feed carries
+ * a full-match 1X2 market (preferred "market brain" — true home/draw/away win
+ * prob) AND de-margined Asian Handicap (`part1/part2`, level line = draw-no-bet)
+ * as a fallback. CRITICAL: the feed ALSO carries per-half / extra-time /
+ * penalties versions of these markets — those are DIFFERENT markets (e.g. the
+ * 1st-half 1X2 sits ~20pts off the full-match one) and MUST NOT be mixed into a
+ * single curve, or the market line thrashes and every goal looks pre-priced. We
+ * therefore accept full-match-period markets only.
  */
 
 import type { OddsTick, ScoreEvent, Side } from "@/types/foresight";
@@ -68,8 +73,21 @@ interface Probs {
   away: number;
 }
 
-/** Three-way 1X2 market → home/draw/away (kept for feeds that carry it). */
+/**
+ * Full-match markets only. TxLINE tags shorter markets via `MarketPeriod`
+ * (e.g. "half=1", "half=2", "et", "et,half=1", "penalties"); the full-match
+ * market has an empty period. Mixing periods thrashes the market curve, so
+ * everything but the full match is rejected here.
+ */
+function isFullMatchPeriod(period: string | undefined): boolean {
+  const s = (period ?? "").trim().toLowerCase();
+  return s === "" || s === "match" || s === "ft" || s === "fulltime" || s === "full" || s === "90";
+}
+
+/** Three-way full-match 1X2 market → home/draw/away (the preferred market brain). */
 function threeWay(p: RawOddsPayload): Probs | null {
+  const st = (p.SuperOddsType ?? "").toUpperCase();
+  if (!(st.includes("1X2") || st.includes("RESULT"))) return null; // only the result market
   if (!p.PriceNames || !p.Pct || p.PriceNames.length !== p.Pct.length) return null;
   const at = (label: RegExp, fallbackIdx: number): number => {
     const i = p.PriceNames.findIndex((n) => label.test(n.toLowerCase()));
@@ -109,6 +127,8 @@ function asianHandicapLevel(p: RawOddsPayload, p1IsHome: boolean): Probs | null 
  * Asian Handicap; every other market/line is ignored.
  */
 export function normalizeOdds(p: RawOddsPayload, p1IsHome = true): OddsTick | null {
+  // Reject per-half / extra-time / penalties markets — full match only.
+  if (!isFullMatchPeriod(p.MarketPeriod)) return null;
   const pr =
     (p.PriceNames?.length === 3 ? threeWay(p) : null) ?? asianHandicapLevel(p, p1IsHome);
   if (!pr) return null;

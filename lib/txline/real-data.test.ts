@@ -109,4 +109,27 @@ describe("real Asian Handicap odds → normalizeOdds", () => {
     expect(normalizeOdds(handicapLine, true)).toBeNull();
     expect(normalizeOdds(naLine, true)).toBeNull();
   });
+
+  // Regression: the feed also carries per-half / extra-time versions of every
+  // market. Mixing them into one curve made it thrash (85%→65%→85% every few
+  // seconds) and every goal looked pre-priced — full-match markets only.
+  const full1x2: RawOddsPayload = {
+    ...level, SuperOddsType: "1X2_PARTICIPANT_RESULT", MarketPeriod: "",
+    PriceNames: ["1", "X", "2"], Pct: ["50", "30", "20"],
+  };
+  it("reads the full-match 1X2 market as home/draw/away", () => {
+    const t = normalizeOdds(full1x2, true)!;
+    expect(t).not.toBeNull();
+    expect(t.homeProb).toBeCloseTo(0.5, 4);
+    expect(t.drawProb).toBeCloseTo(0.3, 4);
+    expect(t.awayProb).toBeCloseTo(0.2, 4);
+  });
+
+  it("rejects per-half and extra-time markets (only the full match counts)", () => {
+    expect(normalizeOdds({ ...full1x2, MarketPeriod: "half=1" }, true)).toBeNull();
+    expect(normalizeOdds({ ...full1x2, MarketPeriod: "half=2" }, true)).toBeNull();
+    expect(normalizeOdds({ ...level, MarketPeriod: "et" }, true)).toBeNull();
+    expect(normalizeOdds({ ...level, MarketPeriod: "et,half=1" }, true)).toBeNull();
+    expect(normalizeOdds({ ...level, MarketPeriod: "penalties" }, true)).toBeNull();
+  });
 });

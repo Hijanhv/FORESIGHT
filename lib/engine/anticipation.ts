@@ -41,8 +41,18 @@ export interface EngineParams {
   brewThreshold: number;
   /** Minimum normalized pressure before brewing can trip. */
   brewMinPressure: number;
+  /**
+   * Debounce: the brew condition must hold continuously for this many ms before
+   * `brewing` trips. 0 = instantaneous (legacy). On real feeds this is what stops
+   * a single corner from flickering the gauge — brewing means *sustained* pressure.
+   */
+  brewSustainMs: number;
 }
 
+/**
+ * Defaults tuned against the *synthetic* demo (a scripted corner barrage → goal).
+ * Kept as-is so the guided demo still lights up on cue.
+ */
 export const DEFAULT_PARAMS: EngineParams = {
   pressureTauMs: 90_000,
   cornerWeight: 1,
@@ -52,6 +62,27 @@ export const DEFAULT_PARAMS: EngineParams = {
   marketMoveFull: 0.04,
   brewThreshold: 0.55,
   brewMinPressure: 0.5,
+  brewSustainMs: 0,
+};
+
+/**
+ * Params tuned against REAL World Cup replays (see `scripts/tune-engine`). Real
+ * pressure is sparser and slower than the synthetic barrage, so pressure memory
+ * is longer and the bar lower — but a sustain window keeps the gauge honest (it
+ * fires on held territorial pressure, not one corner). Corners+cards are a weak
+ * predictor, so this is deliberately a "pressure vs market-lag" meter, not a
+ * goal oracle. Used by the live feed and the past-match replays.
+ */
+export const REAL_PARAMS: EngineParams = {
+  pressureTauMs: 240_000,
+  cornerWeight: 1.2,
+  cardWeight: 0.35,
+  pressureScale: 1.7,
+  marketBaselineTauMs: 120_000,
+  marketMoveFull: 0.04,
+  brewThreshold: 0.4,
+  brewMinPressure: 0.36,
+  brewSustainMs: 20_000,
 };
 
 export interface EngineState {
@@ -89,6 +120,9 @@ export interface EngineState {
   ts: number;
   // most recent notable pitch event (goal / card) — persists until replaced
   lastEvent: PitchEvent | null;
+  // brew debounce: side + ts of the current continuous "brew condition" run
+  brewSide: Side | null;
+  brewSinceTs: number | null;
 }
 
 // In-play phases where `brewing` may trip. Includes extra-time halves (7/9) —
@@ -128,6 +162,8 @@ export function initState(fixtureId: string): EngineState {
     sawSnapshot: false,
     ts: 0,
     lastEvent: null,
+    brewSide: null,
+    brewSinceTs: null,
   };
 }
 
@@ -340,8 +376,21 @@ function frame(state: EngineState, p: EngineParams): ForesightFrame {
   // (covers status ids the enum doesn't name, without brewing at half-time/pre).
   const inPlay = ACTIVE_PHASES.has(state.phase) || state.clockRunning;
   const anticipation = clamp01(pressureNorm * (1 - marketResponse));
+
+  // Instantaneous brew condition, then a sustain/debounce: it must hold for the
+  // same side continuously for `brewSustainMs` before `brewing` trips.
+  const instBrew = inPlay && pressureNorm >= p.brewMinPressure && anticipation >= p.brewThreshold;
+  if (instBrew && state.brewSide === pressureSide && state.brewSinceTs != null) {
+    // continuing the current run — keep its start time
+  } else if (instBrew) {
+    state.brewSide = pressureSide;
+    state.brewSinceTs = state.ts;
+  } else {
+    state.brewSide = null;
+    state.brewSinceTs = null;
+  }
   const brewing =
-    inPlay && pressureNorm >= p.brewMinPressure && anticipation >= p.brewThreshold;
+    instBrew && state.brewSinceTs != null && state.ts - state.brewSinceTs >= p.brewSustainMs;
 
   return {
     fixtureId: state.fixtureId,

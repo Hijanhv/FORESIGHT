@@ -18,7 +18,7 @@ import {
   fetchFixtureMeta,
 } from "@/lib/txline/client";
 import { buildWalletProof } from "@/lib/solana";
-import { initState, step } from "@/lib/engine";
+import { initState, step, REAL_PARAMS } from "@/lib/engine";
 import type { UnifiedEvent } from "@/types/foresight";
 
 export const dynamic = "force-dynamic";
@@ -182,7 +182,7 @@ export async function GET(request: NextRequest) {
           events.sort((a, b) => a.ts - b.ts);
           for (const ev of events) {
             if (cancelled) break;
-            const frame = step(state, ev);
+            const frame = step(state, ev, REAL_PARAMS);
             send(frame);
           }
         }
