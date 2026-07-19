@@ -44,9 +44,10 @@ export default function Home() {
             style={{ animationDelay: "0.2s" }}
           >
             Pro traders know pressure surges{" "}
-            <em className="not-italic text-ink">before</em> the odds move. Foresight turns
-            TxLINE&rsquo;s live odds and pitch events into one glowing number that lights up the
-            instant a goal is brewing — the trading-desk sixth sense, for every fan.
+            <em className="not-italic text-ink">before</em>{" "}
+            the odds move. Foresight turns TxLINE&rsquo;s live odds and pitch events into one
+            glowing number that lights up the instant a goal is brewing — the trading-desk sixth
+            sense, for every fan.
           </p>
           <div
             className="rise-in mt-1 flex flex-wrap items-center justify-center gap-2"
