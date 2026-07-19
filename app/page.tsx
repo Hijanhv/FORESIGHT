@@ -2,6 +2,12 @@ import { FsLockup } from "@/components/brand/logo";
 import { PixelHeatmap } from "@/components/brand/PixelHeatmap";
 import { MatchView } from "@/components/gauge/MatchView";
 
+// thermal ramp (cool → hot) for the scale legend — matches the gauge + heatmap
+const THERMAL = [
+  "#2B5CFF", "#2E7BFF", "#22A6E0", "#3DD68C", "#7BE000", "#A6E22E", "#C8E020",
+  "#FFD21F", "#FFBC1F", "#FFA01A", "#FF7A1A", "#FF5A24", "#FF3E32", "#FF2E3F",
+];
+
 export default function Home() {
   return (
     <div className="flex flex-1 flex-col">
@@ -19,7 +25,7 @@ export default function Home() {
       <section className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 px-6 py-12 md:grid-cols-[1.5fr_1fr] md:gap-12 md:py-16">
         <div>
           <p className="rise-in eyebrow" style={{ animationDelay: "0.04s" }}>
-            Consumer &amp; Fan — World Cup 2026
+            Consumer &amp; Fan · World Cup 2026
           </p>
           <h1
             className="rise-in display-tight mt-5 text-[13vw] leading-[0.92] sm:text-6xl md:text-7xl"
@@ -32,23 +38,27 @@ export default function Home() {
             the market does<span className="text-hot">.</span>
           </h1>
         </div>
-        <div className="flex flex-col justify-end gap-6">
+        <div className="flex flex-col justify-end gap-7">
           <p
             className="rise-in max-w-sm text-[15px] leading-6 text-muted md:text-base"
             style={{ animationDelay: "0.18s" }}
           >
             Pro traders know pressure surges{" "}
             <span className="text-ink">before</span>{" "}
-            the odds move. Foresight turns TxLINE&rsquo;s live odds and pitch events into one number
-            — the trading-desk sixth sense, for every fan.
+            the odds move. Foresight reads TxLINE&rsquo;s live odds and pitch events, then turns that
+            gap into one number. The trading-desk sixth sense, now for every fan.
           </p>
-          <div className="rise-in flex flex-wrap gap-2" style={{ animationDelay: "0.26s" }}>
-            <span className="rounded-full border border-cool/40 px-3 py-1 font-mono text-[11px] uppercase tracking-wide text-cool">
-              cool · market
-            </span>
-            <span className="rounded-full border border-hot/40 px-3 py-1 font-mono text-[11px] uppercase tracking-wide text-hot">
-              hot · 🔥 brewing
-            </span>
+          {/* thermal scale legend — the cool→hot range the gauge runs on */}
+          <div className="rise-in max-w-sm" style={{ animationDelay: "0.26s" }}>
+            <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.18em]">
+              <span className="text-cool">Cool · market</span>
+              <span className="text-hot">🔥 Brewing</span>
+            </div>
+            <div className="mt-2 flex gap-[3px]">
+              {THERMAL.map((c, i) => (
+                <span key={i} className="h-3 flex-1" style={{ background: c }} />
+              ))}
+            </div>
           </div>
         </div>
       </section>

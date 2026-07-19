@@ -62,7 +62,7 @@ async function getApiToken(jwt: string): Promise<string> {
 
 export async function GET(request: NextRequest) {
   if (!isConfigured()) {
-    return new Response("TxLINE env vars not set — use /api/gauge for the synthetic demo.", {
+    return new Response("TxLINE env vars not set. Use /api/gauge for the synthetic demo.", {
       status: 503,
     });
   }

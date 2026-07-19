@@ -47,7 +47,7 @@ export function MatchView() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Fixture ID — or leave blank for demo"
+            placeholder="Fixture ID, or leave blank for the demo"
             className="flex-1 rounded-full border border-line bg-canvas px-4 py-2 font-mono text-[11px] text-ink placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-cool/50"
           />
           {fixtureId ? (

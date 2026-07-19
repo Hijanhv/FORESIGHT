@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
   const now = Date.now();
   if (now - lastPostAt < MIN_INTERVAL_MS) {
-    return Response.json({ error: "Too fast — try again in a moment." }, { status: 429 });
+    return Response.json({ error: "Too fast. Try again in a moment." }, { status: 429 });
   }
   lastPostAt = now;
 

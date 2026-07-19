@@ -314,7 +314,7 @@ export function GaugeWidget({
 
       <div
         data-shot="gauge"
-        className={`relative flex w-full max-w-md flex-col items-center gap-6 rounded-2xl p-6 card sm:p-7 ${
+        className={`relative flex w-full max-w-md flex-col items-center gap-5 rounded-2xl p-6 card sm:p-7 ${
           brewing ? "brewing-ring" : ""
         }`}
       >
@@ -336,9 +336,9 @@ export function GaugeWidget({
           </button>
         </div>
 
-        {/* Arc gauge */}
+        {/* Arc gauge — viewBox cropped below the arc so there's no empty cup */}
         <div className="relative">
-          <svg viewBox="0 0 64 64" width={196} height={196} aria-label={`Anticipation: ${Math.round(ant * 100)}%`}>
+          <svg viewBox="0 0 64 55" width={200} height={172} aria-label={`Anticipation: ${Math.round(ant * 100)}%`}>
             <defs>
               <linearGradient id="liveArc" gradientUnits="userSpaceOnUse" x1="9" y1="0" x2="55" y2="0">
                 <stop offset="0" stopColor={COOL} />
@@ -370,7 +370,7 @@ export function GaugeWidget({
           </svg>
 
           {/* Centre overlay */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center pb-9">
+          <div className="absolute inset-0 flex flex-col items-center justify-center pb-3">
             <span
               className="font-display text-6xl font-bold tabular-nums leading-none"
               style={{ color: antColor(ant, brewing), letterSpacing: "-0.04em", transition: "color 0.4s ease" }}
@@ -388,21 +388,19 @@ export function GaugeWidget({
           </div>
         </div>
 
-        {/* Big event flash */}
-        <div className="flex h-7 items-center justify-center">
-          {flash && (() => {
-            const cfg = EVENT_CONFIG[flash.kind];
-            return (
-              <span
-                key={flash.seq}
-                className="flash-pop flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-wider"
-                style={{ color: cfg.color, borderColor: `${cfg.color}55`, background: `${cfg.color}12` }}
-              >
-                {cfg.icon} {cfg.label} · {flash.side === "home" ? homeLabel : awayLabel} · {clock(flash.clockSeconds)}
-              </span>
-            );
-          })()}
-        </div>
+        {/* Big event flash — only rendered when there's an event (no dead space) */}
+        {flash && (() => {
+          const cfg = EVENT_CONFIG[flash.kind];
+          return (
+            <span
+              key={flash.seq}
+              className="flash-pop -my-1 flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-wider"
+              style={{ color: cfg.color, borderColor: `${cfg.color}55`, background: `${cfg.color}12` }}
+            >
+              {cfg.icon} {cfg.label} · {flash.side === "home" ? homeLabel : awayLabel} · {clock(flash.clockSeconds)}
+            </span>
+          );
+        })()}
 
         {/* "Called It" verdict */}
         {verdict && (
@@ -411,7 +409,7 @@ export function GaugeWidget({
               ✓ You called it
             </div>
             <div className="mt-0.5 font-mono text-[10px] text-muted">
-              the goal came {verdict.deltaSec > 0 ? `${verdict.deltaSec}s` : "moments"} after your read — before the market moved
+              the goal came {verdict.deltaSec > 0 ? `${verdict.deltaSec}s` : "moments"} after your read, before the market moved
             </div>
           </div>
         )}
@@ -422,17 +420,19 @@ export function GaugeWidget({
             onClick={handleCallIt}
             disabled={calling}
             className={`relative w-full rounded-xl border px-4 py-3 font-display text-[12px] font-semibold uppercase tracking-wider transition-all disabled:opacity-60 ${
-              brewing ? "shimmer border-hot bg-hot text-white" : "border-line text-muted hover:border-hot/50 hover:text-hot"
+              brewing
+                ? "shimmer border-hot bg-hot text-white"
+                : "border-ink/15 bg-black/[0.02] text-ink hover:border-hot/60 hover:text-hot"
             }`}
           >
-            {calling ? "recording on Solana…" : brewing ? "🔥 Call it — I feel a goal coming" : "Call it — record your read on-chain"}
+            {calling ? "recording on Solana…" : brewing ? "🔥 Call it · I feel a goal coming" : "Call it · record your read on-chain"}
           </button>
         )}
 
         {receipt && (
           <div className="w-full rounded-xl border border-hot/40 bg-hot/5 px-4 py-3 text-center">
             <div className="font-display text-[12px] font-semibold uppercase tracking-wider text-hot">
-              ✓ Called it — recorded on Solana
+              ✓ Called it · recorded on Solana
             </div>
             <div className="mt-1 font-mono text-[10px] text-muted break-all">
               {receipt.txSig.slice(0, 8)}…{receipt.txSig.slice(-8)}
@@ -455,11 +455,11 @@ export function GaugeWidget({
         {/* Score & clock */}
         <div className="text-center">
           <div className="font-display text-4xl font-bold tabular-nums text-ink" style={{ letterSpacing: "-0.03em" }}>
-            {frame ? `${frame.homeScore} – ${frame.awayScore}` : "— – —"}
+            {frame ? `${frame.homeScore} – ${frame.awayScore}` : "0 – 0"}
           </div>
           <div className="mt-1 font-mono text-[11px] text-muted">
             {frame
-              ? `${clock(frame.clockSeconds)} · ${PHASE_LABEL[frame.phase] ?? "—"}`
+              ? `${clock(frame.clockSeconds)} · ${PHASE_LABEL[frame.phase] ?? "Live"}`
               : liveConnected ? "pre-match · waiting for kickoff" : "connecting…"}
           </div>
         </div>

@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Foresight — feel a goal coming",
+    name: "Foresight · Feel the goal coming",
     short_name: "Foresight",
     description:
-      "The momentum-vs-market gap, made beautiful. Powered by TxLINE live odds + events.",
+      "The momentum vs. market gap, made beautiful. Powered by TxLINE live odds and events.",
     start_url: "/",
     display: "standalone",
     orientation: "portrait",
