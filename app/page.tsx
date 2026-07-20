@@ -3,6 +3,7 @@ import { PixelHeatmap } from "@/components/brand/PixelHeatmap";
 import { MatchView } from "@/components/gauge/MatchView";
 import { ConnectButton } from "@/components/wallet/ConnectButton";
 import { GetPhantomBanner } from "@/components/wallet/GetPhantomBanner";
+import { InstallAppBanner } from "@/components/pwa/InstallAppBanner";
 
 // thermal ramp (cool → hot) for the scale legend — matches the gauge + heatmap
 const THERMAL = [
@@ -26,9 +27,13 @@ export default function Home() {
       </header>
       <div className="mx-auto w-full max-w-6xl px-6"><div className="hairline" /></div>
 
-      {/* Shows on every visit while signed out — the install path must not be
-          a one-time thing a returning visitor can no longer find. */}
-      <div className="pt-4"><GetPhantomBanner /></div>
+      {/* Both show on every visit rather than once: Chrome suppresses its own
+          install prompt after a dismissal, and the wallet install path must not
+          be something a returning visitor can no longer find. */}
+      <div className="flex flex-col gap-2 pt-4">
+        <InstallAppBanner />
+        <GetPhantomBanner />
+      </div>
 
       {/* hero — editorial split: headline left, brief right */}
       <section className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 px-6 py-12 md:grid-cols-[1.5fr_1fr] md:gap-12 md:py-16">

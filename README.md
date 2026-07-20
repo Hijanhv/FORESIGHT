@@ -46,6 +46,7 @@ Built for the **TxODDS World Cup Hackathon** (Consumer & Fan Experiences track) 
 ## Table of contents
 
 - [The insight](#the-insight)
+- [Vision](#vision)
 - [What a fan sees](#what-a-fan-sees)
 - [How it works](#how-it-works)
   - [The anticipation engine](#the-anticipation-engine)
@@ -54,6 +55,8 @@ Built for the **TxODDS World Cup Hackathon** (Consumer & Fan Experiences track) 
 - [TxLINE endpoints used](#txline-endpoints-used)
 - [Testing & validation](#testing--validation)
 - [Impact & commercial path](#impact--commercial-path)
+- [Roadmap](#roadmap)
+- [How we work](#how-we-work)
 - [Tech stack](#tech-stack)
 - [Run it locally](#run-it-locally)
 - [Deployment](#deployment)
@@ -73,6 +76,27 @@ anticipation = on-pitch pressure  ×  (1 − how much the market has already rep
 ```
 
 High pressure **and** a flat market → `anticipation` climbs → **🔥 a goal is brewing.** The moment the market catches up, anticipation fades. It's a feeling every fan has ("something's coming here…"), turned into a live, quantified, shareable signal.
+
+---
+
+## Vision
+
+**Watching should be a game you can win.**
+
+Sports betting turned every fan into a customer. We think the more interesting move is turning every fan into an **analyst** — someone whose read on a match is measured, timestamped, and worth something, without a single wager.
+
+Three convictions drive this:
+
+**1. The interesting moment is *before* the goal, not after.**
+Highlight reels are a solved problem. Nobody has built for the ninety seconds where a match is visibly tilting and the scoreline hasn't caught up yet. That window is where fans actually lean forward, and it's currently unmeasured and unrewarded.
+
+**2. A read is only worth something if it can't be faked.**
+"I called it" is worthless in a group chat — everyone remembers being right. Anchoring the call on Solana *before* the market moves turns a boast into a **verifiable claim**: a timestamped receipt, provable against data anyone can independently check. That's the piece that can't be built without on-chain settlement.
+
+**3. Verifiable data is a consumer feature, not just an infrastructure one.**
+TxLINE's on-chain verifiability is usually framed as a guarantee for institutions. Pointed at fans, it becomes something better: proof that the thing you called was real, and that the app didn't move the goalposts after the fact.
+
+**Where this goes.** Foresight today is one gauge on one match. The end state is a **track record** — a fan's calls accumulating into a public, portable, provable history of reads. Not a leaderboard of who bet most, but of who *saw it first*. A credential you own, earned by watching well.
 
 ---
 
@@ -212,6 +236,50 @@ npm run lint  # clean
 - **Affiliate:** the moment the gauge lights up is the highest-intent moment in a match, a natural, well-timed hand-off to a licensed operator.
 
 It's a living demo of exactly what TxLINE sells: **verifiable, real-time sports data that consumer products can be built on.**
+
+---
+
+## Roadmap
+
+What exists today is the loop end-to-end: live data → anticipation → a call → an on-chain receipt. What it becomes:
+
+### Next — make a call worth keeping
+
+- **Fan track record.** Calls aggregate per wallet into a public record: hit rate, average lead time over the market, best call of the tournament. The receipt stops being a one-off and starts being a *history*.
+- **Scored calls, not just recorded ones.** Today a call is stamped; next it's graded — did the goal come, how far ahead of the market were you, how contrarian was the read. Lead time in seconds is the headline number.
+- **Shareable proof cards.** A call becomes an image with the gauge, the clock, the market line, and the Solscan link — built to survive a screenshot, since that's how it will actually travel.
+
+### Then — more of the match, more of the sport
+
+- **Beyond goals.** The same pressure-vs-market gap predicts cards, corners, and momentum swings. The engine generalises; the thresholds don't yet.
+- **Multi-match view.** During a tournament the real question is *which match to switch to right now*. Ranking live fixtures by anticipation is a natural front page.
+- **Other sports.** Basketball and tennis have the same structure — visible momentum, a market that lags it. The engine is sport-agnostic; the feature extraction isn't.
+
+### Longer term — the credential
+
+- **Portable reputation.** A wallet's Foresight history readable by anything else on Solana, so a track record earned here travels.
+- **Operator hand-off.** The moment the gauge lights is the highest-intent moment in a match — a clean, well-timed, *opt-in* referral to a licensed operator, for users who want it.
+- **Open engine.** Publish the anticipation parameters and let people fork, retune, and compete on whose model calls goals earliest.
+
+**Not on the roadmap:** taking bets, holding funds, or anything requiring a fan to risk money to participate. Sign-in is a free signature and always will be.
+
+---
+
+## How we work
+
+A short, honest description of the workflow, since this repo is public and the history reflects it.
+
+**Branching.** Single branch — work lands directly on `main`, no PR ceremony. `main` auto-deploys to Vercel, so a push is a release. That's a deliberate trade for hackathon speed; it's the first thing to change if more people join.
+
+**Verification over assertion.** Bugs get confirmed by measurement before they get fixed, and fixes get confirmed by measurement after. In practice that means driving the real app headlessly and reading real numbers — SSE connection counts, CLS, `ScriptDuration`, frame timing — rather than trusting that a change worked. Several reported "bugs" in this repo turned out to be misattributed, and the control run is what caught it. Commit messages record the numbers.
+
+**Definition of done.** `npx tsc --noEmit`, `npm run lint`, and `npm test` all clean, plus evidence the change does what it claims on a real page. Lint rules get fixed, not suppressed — a `react-hooks/set-state-in-effect` warning is usually pointing at a genuine bug.
+
+**Known-unknowns get filed, not buried.** Anything found-but-unfixed, reported-but-unreproduced, or verified-only-in-part goes to [Issues](https://github.com/Hijanhv/FORESIGHT/issues) with what *was* verified and what wasn't. The open issues are an accurate list of what we don't yet know.
+
+**Secrets.** Solana keypairs and `.env*` are gitignored (`*key*.json`, `.env*`) and have never been committed. The prover wallet is a hot wallet holding trivial funds — treat it as disposable.
+
+**Contributing.** Issues and PRs welcome. Good starting points are anything labelled `needs-repro` — most need a device or a network condition we couldn't reproduce headlessly.
 
 ---
 
