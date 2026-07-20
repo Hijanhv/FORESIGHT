@@ -9,7 +9,14 @@
  * "Called It" receipt is still posted server-side, now stamped with this wallet.
  */
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { buildSignInMessage } from "@/lib/auth-message";
 
 interface SignMessageResult {
@@ -28,6 +35,8 @@ interface WalletContextValue {
   connecting: boolean;
   error: string | null;
   hasProvider: boolean;
+  /** True when tapping connect will hand off to the Phantom app rather than sign in here. */
+  handsOffToApp: boolean;
   /** Connect + sign in. Resolves to the wallet address, or null on failure. */
   signIn: () => Promise<string | null>;
   signOut: () => Promise<void>;
@@ -44,6 +53,51 @@ function getProvider(): SolanaProvider | null {
   return w.phantom?.solana ?? w.solana ?? null;
 }
 
+function isMobile(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  // iPadOS 13+ reports a Macintosh UA; touch points are what disambiguate it.
+  return (
+    /Android|iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
+  );
+}
+
+/** Phantom's in-app browser identifies itself, which is how we avoid a redirect loop. */
+function inPhantomBrowser(): boolean {
+  return typeof navigator !== "undefined" && /Phantom/i.test(navigator.userAgent);
+}
+
+/**
+ * Deeplink that reopens this exact page inside Phantom's in-app browser, which
+ * *does* inject window.solana — so the normal SIWS flow below then runs there
+ * unchanged. Both params must be URL-encoded.
+ */
+function phantomBrowseLink(): string {
+  const target = encodeURIComponent(window.location.href);
+  const ref = encodeURIComponent(window.location.origin);
+  return `https://phantom.app/ul/browse/${target}?ref=${ref}`;
+}
+
+/**
+ * Wallets inject at their own pace. Phantom announces itself with an event; the
+ * short poll covers the ones that don't, then stops so we aren't ticking forever.
+ */
+function subscribeToProvider(onChange: () => void): () => void {
+  window.addEventListener("phantom#initialized", onChange);
+  const poll = setInterval(onChange, 200);
+  const stop = setTimeout(() => clearInterval(poll), 3000);
+  return () => {
+    window.removeEventListener("phantom#initialized", onChange);
+    clearInterval(poll);
+    clearTimeout(stop);
+  };
+}
+
+const providerSnapshot = () => !!getProvider();
+const handoffSnapshot = () => isMobile() && !inPhantomBrowser();
+const serverFalse = () => false;
+const noopSubscribe = () => () => {};
+
 function toBase64(bytes: Uint8Array): string {
   let binary = "";
   for (const b of bytes) binary += String.fromCharCode(b);
@@ -54,9 +108,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [wallet, setWallet] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Detect an injected wallet once at mount (SSR-safe: getProvider() → null on
-  // the server). Not rendered, so a server(false)/client(true) gap is harmless.
-  const [hasProvider] = useState<boolean>(() => !!getProvider());
+  // Wallet injection is external state, so subscribe to it rather than sampling
+  // it once: Solflare and Backpack inject later than Phantom, and a single
+  // synchronous check races them into reporting "no wallet" on a machine that
+  // has one. The server snapshot is false, which keeps hydration in agreement.
+  const hasProvider = useSyncExternalStore(subscribeToProvider, providerSnapshot, serverFalse);
+  const mobileHandoff = useSyncExternalStore(noopSubscribe, handoffSnapshot, serverFalse);
+  const handsOffToApp = !hasProvider && mobileHandoff;
 
   // Hydrate any existing session after mount. setWallet runs inside the async
   // callback (allowed), not synchronously in the effect body.
@@ -72,10 +130,21 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     const provider = getProvider();
     if (!provider) {
-      setError("No Solana wallet found. Install Phantom to sign in.");
-      if (typeof window !== "undefined") {
-        window.open("https://phantom.app/", "_blank", "noopener,noreferrer");
+      // A mobile browser has no extensions, so there is never an injected
+      // provider here. Opening phantom.app in a new tab just triggers the
+      // universal link with nothing to act on — the app launches and bounces
+      // straight back out. Navigate (don't window.open) to the browse deeplink
+      // so Phantom reopens this page in its own browser, where a provider does
+      // exist and the flow below continues normally.
+      if (isMobile() && !inPhantomBrowser()) {
+        window.location.href = phantomBrowseLink();
+        return null;
       }
+      setError(
+        inPhantomBrowser()
+          ? "Phantom didn't finish loading. Pull to refresh and try again."
+          : "No Solana wallet detected. Install the Phantom extension, then reload.",
+      );
       return null;
     }
 
@@ -136,7 +205,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <WalletContext.Provider value={{ wallet, connecting, error, hasProvider, signIn, signOut }}>
+    <WalletContext.Provider
+      value={{ wallet, connecting, error, hasProvider, handsOffToApp, signIn, signOut }}
+    >
       {children}
     </WalletContext.Provider>
   );
