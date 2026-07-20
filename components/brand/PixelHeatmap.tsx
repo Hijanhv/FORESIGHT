@@ -62,19 +62,7 @@ export function PixelHeatmap({
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     let raf = 0;
     let w = 0, h = 0, cols = 0, rows = 0, dpr = 1;
-
-    const resize = () => {
-      dpr = Math.min(2, window.devicePixelRatio || 1);
-      w = canvas.clientWidth;
-      h = height;
-      canvas.width = Math.floor(w * dpr);
-      canvas.height = Math.floor(h * dpr);
-      cols = Math.ceil(w / cell) + 1;
-      rows = Math.ceil(h / cell) + 1;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-    resize();
-    window.addEventListener("resize", resize);
+    let onScreen = true, pageVisible = true;
 
     // layered value-noise heat field, biased hot toward a slowly drifting centre
     const gap = 1.5;
@@ -107,22 +95,62 @@ export function PixelHeatmap({
       }
     };
 
+    // (Re)size the backing store — but only when the CSS width (or dpr) truly
+    // changes. Mobile browsers fire a viewport change on every address-bar
+    // show/hide during a vertical scroll; reinitialising the canvas there
+    // clears it mid-scroll and reads as a flicker/"glitch". Guarding on width
+    // keeps that from happening.
+    const setup = (): boolean => {
+      const nextDpr = Math.min(2, window.devicePixelRatio || 1);
+      const nextW = canvas.clientWidth;
+      if (nextW === w && nextDpr === dpr) return false;
+      dpr = nextDpr;
+      w = nextW;
+      h = height;
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      cols = Math.ceil(w / cell) + 1;
+      rows = Math.ceil(h / cell) + 1;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return true;
+    };
+    setup();
+
+    // ResizeObserver reacts only to real element-box changes — never to the
+    // address-bar-driven viewport shifts that a window "resize" listener would
+    // catch — so scrolling on a phone no longer reinitialises the canvas.
+    const ro = new ResizeObserver(() => { if (setup() && reduce) draw(1.2); });
+    ro.observe(canvas);
+
     if (reduce) {
       draw(1.2);
     } else {
       let t = 0;
       let last = 0;
       const loop = (now: number) => {
-        // ~30fps for a calm, engineered cadence
-        if (now - last > 33) { t += 0.02; draw(t); last = now; }
+        // ~30fps for a calm, engineered cadence — but only paint while the
+        // canvas is actually on-screen and the tab is visible.
+        if (onScreen && pageVisible && now - last > 33) { t += 0.02; draw(t); last = now; }
         raf = requestAnimationFrame(loop);
       };
       raf = requestAnimationFrame(loop);
     }
 
+    // Skip painting when the heatmap is scrolled out of view or the tab is
+    // hidden — no wasted work, and smoother scrolling on low-end phones.
+    const io = new IntersectionObserver(
+      ([e]) => { onScreen = e.isIntersecting; },
+      { rootMargin: "120px" },
+    );
+    io.observe(canvas);
+    const onVis = () => { pageVisible = !document.hidden; };
+    document.addEventListener("visibilitychange", onVis);
+
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener("resize", resize);
+      ro.disconnect();
+      io.disconnect();
+      document.removeEventListener("visibilitychange", onVis);
     };
   }, [height, cell]);
 

@@ -27,12 +27,12 @@ export default function Home() {
 
       {/* hero — editorial split: headline left, brief right */}
       <section className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 px-6 py-12 md:grid-cols-[1.5fr_1fr] md:gap-12 md:py-16">
-        <div>
+        <div className="min-w-0">
           <p className="rise-in eyebrow" style={{ animationDelay: "0.04s" }}>
             Consumer &amp; Fan · World Cup 2026
           </p>
           <h1
-            className="rise-in display-tight mt-5 text-[13vw] leading-[0.92] sm:text-6xl md:text-7xl"
+            className="rise-in display-tight mt-5 text-[9.5vw] leading-[0.95] break-words sm:text-6xl sm:leading-[0.92] md:text-7xl"
             style={{ animationDelay: "0.1s" }}
           >
             Feel the goal
@@ -42,7 +42,7 @@ export default function Home() {
             the market does<span className="text-hot">.</span>
           </h1>
         </div>
-        <div className="flex flex-col justify-end gap-7">
+        <div className="flex min-w-0 flex-col justify-end gap-7">
           <p
             className="rise-in max-w-sm text-[15px] leading-6 text-muted md:text-base"
             style={{ animationDelay: "0.18s" }}
