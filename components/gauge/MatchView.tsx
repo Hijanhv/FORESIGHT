@@ -18,6 +18,7 @@ export function MatchView() {
   const [fixtureId, setFixtureId] = useState<string | undefined>(undefined);
   const [forceDemo, setForceDemo] = useState(false);
   const [replayIndex, setReplayIndex] = useState<ReplayIndexEntry[]>([]);
+  const [indexLoaded, setIndexLoaded] = useState(false);
   const [replay, setReplay] = useState<Replay | null>(null);
   const [loadingReplay, setLoadingReplay] = useState(false);
 
@@ -39,7 +40,8 @@ export function MatchView() {
     fetch("/replays/index.json")
       .then((r) => (r.ok ? r.json() : []))
       .then((idx: ReplayIndexEntry[]) => setReplayIndex(Array.isArray(idx) ? idx : []))
-      .catch(() => setReplayIndex([]));
+      .catch(() => setReplayIndex([]))
+      .finally(() => setIndexLoaded(true));
   }, []);
 
   const replayIds = new Set(replayIndex.map((e) => e.fixtureId));
@@ -136,6 +138,13 @@ export function MatchView() {
             homeTeam={fixture?.home}
             awayTeam={fixture?.away}
             forceDemo={forceDemo}
+            // Hold the stream until the replay index resolves. `?replay=<id>`
+            // is read in a mount effect, so connecting sooner would open
+            // /api/live with no fixtureId, immediately reopen it with one, then
+            // throw both away when this swaps to <ReplayView> — two dead
+            // connections and a visible flash of the gauge. The index fetch
+            // settles after that mount effect, so it gates both.
+            ready={indexLoaded}
           />
         )}
       </div>

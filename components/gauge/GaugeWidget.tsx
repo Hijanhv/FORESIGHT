@@ -79,7 +79,15 @@ export function GaugeWidget({
   homeTeam = "HOME",
   awayTeam = "AWAY",
   forceDemo = false,
-}: { fixtureId?: string; homeTeam?: string; awayTeam?: string; forceDemo?: boolean } = {}) {
+  ready = true,
+}: {
+  fixtureId?: string;
+  homeTeam?: string;
+  awayTeam?: string;
+  forceDemo?: boolean;
+  /** Gate the stream while the caller is still resolving which fixture to show. */
+  ready?: boolean;
+} = {}) {
   const [frame, setFrame] = useState<ForesightFrame | null>(null);
   const [mode, setMode] = useState<"synthetic" | "live">("synthetic");
   const [liveConnected, setLiveConnected] = useState(false);
@@ -108,6 +116,7 @@ export function GaugeWidget({
 
   // ── SSE pipeline: prefer live TxLINE, fall back to scripted demo ──
   useEffect(() => {
+    if (!ready) return;
     let liveEs: EventSource | null = null;
     let synthEs: EventSource | null = null;
     let gotLiveFrame = false;
@@ -183,7 +192,7 @@ export function GaugeWidget({
       synthEs?.close();
       if (flashTimer.current) clearTimeout(flashTimer.current);
     };
-  }, [fixtureId, forceDemo]);
+  }, [fixtureId, forceDemo, ready]);
 
   const ant = frame?.anticipation ?? 0;
   const brewing = frame?.brewing ?? false;
