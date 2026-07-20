@@ -32,6 +32,29 @@ function antColor(ant: number, brewing: boolean) {
   return COOL;
 }
 
+/**
+ * Renders the eased count-up in its own component so the per-frame setState
+ * stays local. Held in the parent it re-rendered the entire widget — feed,
+ * market bars and <MatchStats> included — on every animation frame, which on a
+ * throttled phone measured ~59 DOM mutations/sec of pure churn.
+ */
+function CountUpValue({
+  target,
+  className,
+  style,
+}: {
+  target: number;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  const v = useCountUp(target);
+  return (
+    <span className={className} style={style}>
+      {Math.round(v)}
+    </span>
+  );
+}
+
 // Smoothly count a displayed value toward its target (rAF eased).
 function useCountUp(target: number, ms = 550) {
   const [v, setV] = useState(target);
@@ -198,7 +221,6 @@ export function GaugeWidget({
   const brewing = frame?.brewing ?? false;
   const momentum = frame?.momentum ?? 0;
   const isLive = mode === "live";
-  const shownAnt = useCountUp(Math.round(ant * 100));
 
   const homeLabel = liveMeta?.home ?? homeTeam;
   const awayLabel = liveMeta?.away ?? awayTeam;
@@ -412,12 +434,11 @@ export function GaugeWidget({
 
           {/* Centre overlay */}
           <div className="absolute inset-0 flex flex-col items-center justify-center pb-3">
-            <span
+            <CountUpValue
+              target={Math.round(ant * 100)}
               className="font-display text-6xl font-bold tabular-nums leading-none"
               style={{ color: antColor(ant, brewing), letterSpacing: "-0.04em", transition: "color 0.4s ease" }}
-            >
-              {Math.round(shownAnt)}
-            </span>
+            />
             <span className="mt-1.5 font-mono text-[9px] uppercase tracking-[0.22em]" style={{ color: antColor(ant, brewing) }}>
               {brewing ? "🔥 brewing" : "anticipation"}
             </span>

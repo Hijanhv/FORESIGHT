@@ -62,9 +62,20 @@ function isMobile(): boolean {
   );
 }
 
-/** Phantom's in-app browser identifies itself, which is how we avoid a redirect loop. */
-function inPhantomBrowser(): boolean {
-  return typeof navigator !== "undefined" && /Phantom/i.test(navigator.userAgent);
+/**
+ * Marks a URL as "already handed off to Phantom". Phantom's documented detection
+ * signal is the injected provider object, NOT the user agent — its in-app browser
+ * is not guaranteed to say "Phantom" — so sniffing the UA to break the loop is
+ * unsound. If injection is slow or fails there, a UA check sends us straight back
+ * out to the deeplink and the app flickers open/closed forever. This marker rides
+ * on the target URL, so it survives the hop into a completely separate webview
+ * (where sessionStorage would not) and the handoff can only ever happen once.
+ */
+const HANDOFF_PARAM = "pw";
+
+function handedOffAlready(): boolean {
+  if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).has(HANDOFF_PARAM);
 }
 
 /**
@@ -73,7 +84,9 @@ function inPhantomBrowser(): boolean {
  * unchanged. Both params must be URL-encoded.
  */
 function phantomBrowseLink(): string {
-  const target = encodeURIComponent(window.location.href);
+  const here = new URL(window.location.href);
+  here.searchParams.set(HANDOFF_PARAM, "1");
+  const target = encodeURIComponent(here.toString());
   const ref = encodeURIComponent(window.location.origin);
   return `https://phantom.app/ul/browse/${target}?ref=${ref}`;
 }
@@ -94,7 +107,7 @@ function subscribeToProvider(onChange: () => void): () => void {
 }
 
 const providerSnapshot = () => !!getProvider();
-const handoffSnapshot = () => isMobile() && !inPhantomBrowser();
+const handoffSnapshot = () => isMobile() && !handedOffAlready();
 const serverFalse = () => false;
 const noopSubscribe = () => () => {};
 
@@ -136,13 +149,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       // straight back out. Navigate (don't window.open) to the browse deeplink
       // so Phantom reopens this page in its own browser, where a provider does
       // exist and the flow below continues normally.
-      if (isMobile() && !inPhantomBrowser()) {
+      if (isMobile() && !handedOffAlready()) {
         window.location.href = phantomBrowseLink();
         return null;
       }
       setError(
-        inPhantomBrowser()
-          ? "Phantom didn't finish loading. Pull to refresh and try again."
+        isMobile()
+          ? "Couldn't reach Phantom. Open phantom.app, then use its Browse tab to visit this page."
           : "No Solana wallet detected. Install the Phantom extension, then reload.",
       );
       return null;

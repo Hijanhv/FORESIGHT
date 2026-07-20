@@ -44,9 +44,20 @@ export function ConnectButton() {
       {error && (
         <span
           role="alert"
-          className="absolute top-full right-0 mt-1.5 max-w-[15rem] text-right font-mono text-[10px] leading-snug text-hot"
+          className="absolute top-full right-0 z-20 mt-1.5 flex max-w-[15rem] flex-col items-end gap-0.5 text-right font-mono text-[10px] leading-snug text-hot"
         >
           {error}
+          {/* Every failure here means "no usable wallet", so always leave a way
+              to get one. The deeplink replaced the old window.open to phantom.app,
+              which was the only install path anyone without Phantom had. */}
+          <a
+            href="https://phantom.app/download"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-cool underline decoration-dotted hover:text-hot"
+          >
+            Get Phantom ↗
+          </a>
         </span>
       )}
     </span>

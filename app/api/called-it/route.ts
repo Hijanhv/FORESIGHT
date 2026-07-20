@@ -103,6 +103,31 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     lastPostAt = 0; // allow a retry on failure
-    return Response.json({ error: String(err) }, { status: 500 });
+    console.error("[called-it] on-chain post failed:", err);
+    return Response.json({ error: humanChainError(err) }, { status: 500 });
   }
+}
+
+/**
+ * Fans should never read a raw RPC dump. An unfunded prover wallet surfaced as
+ * "Attempt to debit an account but found no record of a prior credit.. Logs: []
+ * . Catch the `SendTransactionError` and call `getLogs()`" directly in the UI —
+ * meaningless to a user and it leaks internals. The detail still reaches the
+ * server log above; the fan gets something actionable.
+ */
+function humanChainError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  if (/no record of a prior credit|insufficient (lamports|funds)/i.test(raw)) {
+    return "The prover wallet is out of SOL — the receipt couldn't be posted. Try again shortly.";
+  }
+  if (/blockhash not found|block height exceeded/i.test(raw)) {
+    return "Solana was busy and the receipt expired before it landed. Tap to try again.";
+  }
+  if (/timed out|timeout|ETIMEDOUT|ENOTFOUND|fetch failed|network/i.test(raw)) {
+    return "Couldn't reach Solana just now. Check your connection and tap again.";
+  }
+  if (/429|rate.?limit/i.test(raw)) {
+    return "Solana is rate-limiting us right now. Give it a few seconds and tap again.";
+  }
+  return "Couldn't record your call on-chain. Tap to try again.";
 }
